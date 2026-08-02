@@ -149,7 +149,12 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
     const hist = JSON.parse(localStorage.getItem(`sadhana_history_${email}`) || '[]');
     if (!hist.length) return { avg: 0, streak: 0, total: 0, last7: 0, trend: 'stable' };
     const sorted = [...hist].sort((a, b) => b.date.localeCompare(a.date));
-    const avg = Math.round(hist.reduce((s, h) => s + (h.score || 0), 0) / hist.length);
+    
+    // Calculate average for CURRENT month only
+    const currentMonthPrefix = format(new Date(), 'yyyy-MM');
+    const thisMonthHist = hist.filter(h => h.date.startsWith(currentMonthPrefix));
+    const avg = thisMonthHist.length ? Math.round(thisMonthHist.reduce((s, h) => s + (h.score || 0), 0) / thisMonthHist.length) : 0;
+    
     const last7 = sorted.slice(0, 7).reduce((s, h) => s + (h.score || 0), 0) / 7;
     const prev7 = sorted.slice(7, 14).reduce((s, h) => s + (h.score || 0), 0) / 7;
     let streak = 0;

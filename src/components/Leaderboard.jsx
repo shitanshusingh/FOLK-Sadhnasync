@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Trophy, Medal, Award, Flame, Clock, BookOpen, Star, Target, Gift, Calendar as CalIcon } from 'lucide-react';
+import { Trophy, Medal, Award, Flame, Clock, BookOpen, Star, Target, Gift, Calendar as CalIcon, LogOut, User, Activity, X } from 'lucide-react';
 import { format, startOfMonth, parseISO, isWithinInterval, endOfMonth, differenceInMinutes, parse, startOfWeek, endOfWeek, startOfDay, endOfDay, startOfQuarter, endOfQuarter, startOfYear, endOfYear } from 'date-fns';
 import { calculatePoints } from '../utils/scoring';
 
@@ -12,9 +12,42 @@ const Leaderboard = ({ currentUser }) => {
   const [timeFilter, setTimeFilter] = useState('month'); // today, week, month, quarter, year, custom
   const [customStartDate, setCustomStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
   const [customEndDate, setCustomEndDate] = useState(format(endOfMonth(new Date()), 'yyyy-MM-dd'));
+  const [selectedDevotee, setSelectedDevotee] = useState(null);
+  const [syncCount, setSyncCount] = useState(0);
+
+  const handleOptOutCampaign = () => {
+    if (!activeCampaign) return;
+    if (!window.confirm("Are you sure you want to opt-out of this campaign? Your progress will be removed from the leaderboard.")) return;
+    
+    // Update global campaigns
+    const globalCamps = JSON.parse(localStorage.getItem('sadhana_campaigns') || '[]');
+    const updatedGlobal = globalCamps.map(c => {
+      if (c.id === activeCampaign.id) {
+        return { ...c, enrolledDevotees: (c.enrolledDevotees || []).filter(e => e !== currentUser.email) };
+      }
+      return c;
+    });
+    localStorage.setItem('sadhana_campaigns', JSON.stringify(updatedGlobal));
+
+    // Update guide campaigns
+    const myGuideCamps = JSON.parse(localStorage.getItem(`guide_campaigns_${currentUser.guide}`) || '[]');
+    const updatedGuide = myGuideCamps.map(c => {
+      if (c.id === activeCampaign.id) {
+        return { ...c, enrolledDevotees: (c.enrolledDevotees || []).filter(e => e !== currentUser.email) };
+      }
+      return c;
+    });
+    localStorage.setItem(`guide_campaigns_${currentUser.guide}`, JSON.stringify(updatedGuide));
+    
+    setActiveTabMode('regular');
+    window.dispatchEvent(new Event('sadhana_live_sync'));
+  };
 
   // 1. Initial Campaign check on mount
   useEffect(() => {
+    const handleSync = () => setSyncCount(c => c + 1);
+    window.addEventListener('sadhana_live_sync', handleSync);
+    
     const globalCamps = JSON.parse(localStorage.getItem('sadhana_campaigns') || '[]');
     const myGuideCamps = JSON.parse(localStorage.getItem(`guide_campaigns_${currentUser.guide}`) || '[]');
     const combined = [...globalCamps, ...myGuideCamps];
@@ -27,7 +60,9 @@ const Leaderboard = ({ currentUser }) => {
     if (activeCamp && (activeCamp.enrolledDevotees || []).includes(currentUser.email)) {
       setActiveTabMode('campaign');
     }
-  }, [currentUser.email, currentUser.guide, currentUser.status]);
+    
+    return () => window.removeEventListener('sadhana_live_sync', handleSync);
+  }, [currentUser.email, currentUser.guide, currentUser.status, syncCount]);
 
   // 2. Fetch and calculate scores based on selected activeTabMode
   useEffect(() => {
@@ -150,7 +185,7 @@ const Leaderboard = ({ currentUser }) => {
 
     setLeaderboardData(scoredUsers);
 
-  }, [currentUser, activeTabMode, timeFilter, customStartDate, customEndDate]);
+  }, [currentUser, activeTabMode, timeFilter, customStartDate, customEndDate, syncCount]);
 
   const hasActiveCampaign = Boolean(activeCampaign && activeCampaign.title);
   const activeCampaignTitle = activeCampaign ? activeCampaign.title : "";
@@ -245,6 +280,12 @@ const Leaderboard = ({ currentUser }) => {
               <p style={{ margin: 0, opacity: 0.9, fontSize: '0.82rem', color: '#cbd5e1' }}>
                 Guide: {activeCampaign.guide || currentUser.guide} · Target: {activeCampaign.target || 'All My Devotees'}
               </p>
+              <button 
+                onClick={handleOptOutCampaign}
+                style={{ marginTop: '0.8rem', padding: '0.4rem 0.8rem', borderRadius: '8px', background: 'rgba(239, 68, 68, 0.15)', color: '#f87171', border: '1px solid #ef4444', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', transition: 'all 0.2s' }}
+              >
+                <LogOut size={12} /> Opt Out of Campaign
+              </button>
             </div>
             <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.6rem 1rem', borderRadius: '12px', textAlign: 'right', fontSize: '0.8rem' }}>
               <span style={{ color: '#f59e0b', fontWeight: '700' }}>📅 Campaign Duration</span>
@@ -291,7 +332,7 @@ const Leaderboard = ({ currentUser }) => {
           
           {/* Rank 2 */}
           {top3[1] && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '30%', maxWidth: '120px' }}>
+            <div onClick={() => setSelectedDevotee(top3[1])} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '30%', maxWidth: '120px', cursor: 'pointer' }}>
               <div style={{ position: 'relative', marginBottom: '-15px', zIndex: 2 }}>
                 <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'var(--bg-card)', border: '4px solid #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: 'var(--text-main)', overflow: 'hidden' }}>
                   {top3[1].photo ? <img src={top3[1].photo} alt={top3[1].name} style={{width:'100%', height:'100%', objectFit:'cover'}} /> : top3[1].name.substring(0, 2).toUpperCase()}
@@ -309,7 +350,7 @@ const Leaderboard = ({ currentUser }) => {
           )}
 
           {/* Rank 1 */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '35%', maxWidth: '140px', zIndex: 10 }}>
+          <div onClick={() => setSelectedDevotee(top3[0])} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '35%', maxWidth: '140px', zIndex: 10, cursor: 'pointer' }}>
             <div style={{ position: 'relative', marginBottom: '-15px', zIndex: 2 }}>
               <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'var(--bg-card)', border: '5px solid #fbbf24', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: 'var(--text-main)', fontSize: '1.2rem', overflow: 'hidden' }}>
                 {top3[0].photo ? <img src={top3[0].photo} alt={top3[0].name} style={{width:'100%', height:'100%', objectFit:'cover'}} /> : top3[0].name.substring(0, 2).toUpperCase()}
@@ -327,7 +368,7 @@ const Leaderboard = ({ currentUser }) => {
 
           {/* Rank 3 */}
           {top3[2] && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '30%', maxWidth: '120px' }}>
+            <div onClick={() => setSelectedDevotee(top3[2])} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '30%', maxWidth: '120px', cursor: 'pointer' }}>
               <div style={{ position: 'relative', marginBottom: '-15px', zIndex: 2 }}>
                 <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'var(--bg-card)', border: '4px solid #d97706', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: 'var(--text-main)', overflow: 'hidden' }}>
                   {top3[2].photo ? <img src={top3[2].photo} alt={top3[2].name} style={{width:'100%', height:'100%', objectFit:'cover'}} /> : top3[2].name.substring(0, 2).toUpperCase()}
@@ -365,7 +406,9 @@ const Leaderboard = ({ currentUser }) => {
           const borderStyle = isMe ? '1px solid var(--primary-amber)' : '1px solid rgba(255, 255, 255, 0.05)';
 
           return (
-            <div key={user.email} style={{ display: 'flex', alignItems: 'center', padding: '1rem', background: dynamicBg, border: borderStyle, borderRadius: '12px', gap: '1rem', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }}>
+            <div key={user.email} onClick={() => setSelectedDevotee(user)} style={{ display: 'flex', alignItems: 'center', padding: '1rem', background: dynamicBg, border: borderStyle, borderRadius: '12px', gap: '1rem', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', cursor: 'pointer', transition: 'transform 0.2s' }}
+                 onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+                 onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}>
               <div style={{ fontWeight: 'bold', color: 'var(--text-main)', width: '30px', textAlign: 'center', fontSize: '1.1rem' }}>
                 #{rank}
               </div>
@@ -402,6 +445,46 @@ const Leaderboard = ({ currentUser }) => {
           </div>
           <div style={{ fontWeight: 'bold', color: 'var(--primary-amber)', fontSize: '1.2rem' }}>
             {leaderboardData[myRankIndex]?.totalScore || 0}
+          </div>
+        </div>
+      )}
+
+      {/* Devotee Analytics Modal Overlay */}
+      {selectedDevotee && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(5px)' }} onClick={() => setSelectedDevotee(null)}>
+          <div className="animate-fade-in" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '20px', width: '100%', maxWidth: '350px', padding: '1.5rem', position: 'relative' }} onClick={e => e.stopPropagation()}>
+            <button onClick={() => setSelectedDevotee(null)} style={{ position: 'absolute', top: '15px', right: '15px', background: 'var(--bg-input)', border: 'none', color: 'var(--text-muted)', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }} onMouseEnter={e => e.currentTarget.style.color = '#fff'}>
+              <X size={18} />
+            </button>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.8rem', marginBottom: '1.5rem' }}>
+              <div style={{ width: '80px', height: '80px', borderRadius: '50%', border: '4px solid var(--primary-amber)', overflow: 'hidden' }}>
+                {selectedDevotee.photo ? <img src={selectedDevotee.photo} alt="Avatar" style={{width:'100%', height:'100%', objectFit:'cover'}} /> : <div style={{width:'100%', height:'100%', background:'var(--bg-input)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'1.5rem', fontWeight:'bold', color:'var(--text-main)'}}>{selectedDevotee.name.substring(0,2).toUpperCase()}</div>}
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <h3 style={{ margin: 0, fontSize: '1.3rem', color: 'var(--text-main)', fontWeight: '800' }}>{selectedDevotee.name}</h3>
+                <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.85rem' }}>{selectedDevotee.status}</p>
+              </div>
+            </div>
+            
+            <div style={{ background: 'var(--bg-input)', borderRadius: '12px', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}><Trophy size={16} /> Total Score</span>
+                <span style={{ fontWeight: '800', color: 'var(--primary-amber)' }}>{selectedDevotee.totalScore} pts</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}><BookOpen size={16} /> Total Reading</span>
+                <span style={{ fontWeight: '800', color: '#3b82f6' }}>{selectedDevotee.totalReading} mins</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}><Activity size={16} /> Total Hearing</span>
+                <span style={{ fontWeight: '800', color: '#10b981' }}>{selectedDevotee.totalHearing} mins</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}><Clock size={16} /> Avg Wakeup</span>
+                <span style={{ fontWeight: '800', color: '#8b5cf6' }}>{formatWakeup(selectedDevotee.avgWakeupMins)}</span>
+              </div>
+            </div>
           </div>
         </div>
       )}
