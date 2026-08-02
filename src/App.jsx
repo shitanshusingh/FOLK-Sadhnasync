@@ -435,19 +435,19 @@ function App() {
       <nav className="tabs-bar">
         <div className="tabs-container">
           <button className={`tab-item ${currentTab === 'dashboard' ? 'active' : ''}`} onClick={() => setCurrentTab('dashboard')}>
-            <Calendar size={16} /> 1. Analytics & Dashboard
+            <Calendar size={18} /> <span>Dashboard</span>
           </button>
           <button className={`tab-item ${currentTab === 'tracker' ? 'active' : ''}`} onClick={() => setCurrentTab('tracker')}>
-            <Home size={16} /> 2. Sadhana Entry
+            <Home size={18} /> <span>Entry</span>
           </button>
           <button className={`tab-item ${currentTab === 'leaderboard' ? 'active' : ''}`} onClick={() => setCurrentTab('leaderboard')}>
-            <Trophy size={16} /> 3. Leaderboard
+            <Trophy size={18} /> <span>Rankings</span>
           </button>
           <button className={`tab-item ${currentTab === 'goals' ? 'active' : ''}`} onClick={() => setCurrentTab('goals')}>
-            <CheckSquare size={16} /> 4. Bucket List
+            <CheckSquare size={18} /> <span>Goals</span>
           </button>
           <button className={`tab-item ${currentTab === 'timer' ? 'active' : ''}`} onClick={() => setCurrentTab('timer')}>
-            <Timer size={16} /> 5. Focus Timer
+            <Timer size={18} /> <span>Timer</span>
           </button>
         </div>
       </nav>

@@ -648,8 +648,6 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
                           PDF
                         </button>
                       </div>
-                    </div>                </button>
-                      </div>
                     </div>
                   </div>
                 ))}
