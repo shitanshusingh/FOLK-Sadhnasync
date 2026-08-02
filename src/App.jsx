@@ -346,6 +346,7 @@ function App() {
             Exit Live View
           </button>
         </div>
+      )}
       {/* Background glow effects */}
       <div className="glow-sphere" style={{ top: '-10%', left: '-10%' }}></div>
       <div className="glow-sphere" style={{ bottom: '-20%', right: '-10%', background: 'var(--accent-blue)', opacity: 0.08 }}></div>
