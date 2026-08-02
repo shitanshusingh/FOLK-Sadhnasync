@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Download, ChevronLeft, ChevronRight, User, AlertCircle, Flame, Target, X, CheckCircle, Clock, Edit3, Activity, Trophy } from 'lucide-react';
+import { Download, ChevronLeft, ChevronRight, User, AlertCircle, Flame, Target, X, CheckCircle, Clock, Edit3, Activity, Trophy, BookOpen } from 'lucide-react';
 import { format, parseISO, isWithinInterval, subDays, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, isBefore, startOfToday, startOfYear, endOfYear, differenceInMinutes } from 'date-fns';
 import { calculatePoints, getAbsentCode } from '../utils/scoring';
 import { generateSadhanaPDFReport } from '../utils/pdfGenerator';
