@@ -496,3 +496,62 @@ input[type="time"].form-control {
     padding: 0 1rem !important;
   }
 }
+/* ?? Guide Dashboard Mobile Optimization */
+@media (max-width: 768px) {
+  /* Fix Guide Header & Navigation */
+  .guide-dashboard-container {
+    padding: 0.5rem !important;
+    padding-bottom: 80px !important;
+  }
+  .guide-header-title {
+    font-size: 1.2rem !important;
+  }
+  .guide-header-sub {
+    font-size: 0.75rem !important;
+  }
+  
+  /* Fix Logout Modal being cut off */
+  .guide-logout-modal {
+    right: 50% !important;
+    transform: translateX(50%) !important;
+    width: 280px !important;
+  }
+  
+  /* Fix Stat Cards */
+  .guide-stats-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1rem !important;
+  }
+  
+  /* Fix Charts Layout */
+  .guide-charts-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1rem !important;
+  }
+  
+  /* Fix Devotee Filter Dropdowns */
+  .guide-filters {
+    flex-direction: column !important;
+    gap: 0.8rem !important;
+    align-items: stretch !important;
+  }
+  .guide-filters select {
+    width: 100% !important;
+  }
+  
+  /* Swipeable Tabs */
+  .guide-tabs-nav {
+    display: flex;
+    overflow-x: auto;
+    white-space: nowrap;
+    padding-bottom: 10px;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Fix Campaign Manager Split */
+  .campaign-split {
+    flex-direction: column !important;
+  }
+}

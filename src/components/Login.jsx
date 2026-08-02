@@ -20,8 +20,23 @@ const Login = ({ onAuthSuccess }) => {
     setIsLoading(true);
     setError('');
 
+    // ⚡ Instant Login Check: Try local cache first for zero-latency login
+    const localUsers = JSON.parse(localStorage.getItem('sadhana_users') || '[]');
+    const localUser = localUsers.find(u =>
+      (u.email.toLowerCase() === identifier || (u.userId && u.userId.toLowerCase() === identifier))
+      && u.password === password
+    );
+
+    if (localUser) {
+      cloudSaveUser(localUser); // fire & forget background sync
+      localStorage.setItem('sadhana_remembered_email', localUser.email);
+      onAuthSuccess(localUser);
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      // ☁️ Always fetch latest users from Firebase cloud first
+      // ☁️ Fallback: If not found locally (new device), fetch from cloud
       const users = await cloudFetchAllUsers();
       const user = users.find(u =>
         (u.email.toLowerCase() === identifier || (u.userId && u.userId.toLowerCase() === identifier))
@@ -29,7 +44,6 @@ const Login = ({ onAuthSuccess }) => {
       );
 
       if (user) {
-        // ☁️ Ensure user (like the local Admin) is pushed to the cloud if they log in successfully
         cloudSaveUser(user);
         localStorage.setItem('sadhana_remembered_email', user.email);
         onAuthSuccess(user);
@@ -37,19 +51,7 @@ const Login = ({ onAuthSuccess }) => {
         setError('Invalid username or password');
       }
     } catch (err) {
-      // Fallback to localStorage if cloud fetch fails
-      const localUsers = JSON.parse(localStorage.getItem('sadhana_users') || '[]');
-      const user = localUsers.find(u =>
-        (u.email.toLowerCase() === identifier || (u.userId && u.userId.toLowerCase() === identifier))
-        && u.password === password
-      );
-      if (user) {
-        cloudSaveUser(user);
-        localStorage.setItem('sadhana_remembered_email', user.email);
-        onAuthSuccess(user);
-      } else {
-        setError('Invalid username or password');
-      }
+      setError('Invalid username or password (Cloud sync failed)');
     } finally {
       setIsLoading(false);
     }

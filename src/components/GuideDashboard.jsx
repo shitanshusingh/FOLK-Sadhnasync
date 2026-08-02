@@ -17,6 +17,7 @@ import autoTable from 'jspdf-autotable';
 import folkLogo from '../assets/folk_logo.png';
 import iskconLogo from '../assets/iskcon_logo.png';
 import { generateSadhanaPDFReport } from '../utils/pdfGenerator';
+import { cloudSaveResidency } from '../services/firebase';
 import { cloudSaveCampaign, cloudSaveUser } from '../services/firebase';
 
 // Import all Devotee App Components so Guide can view the full App Experience for any boy!
@@ -284,6 +285,7 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
     const newRes = { id: `res_${Date.now()}`, name: newResidencyName, guide: currentUser.name };
     all.push(newRes);
     localStorage.setItem('sadhana_residencies', JSON.stringify(all));
+    cloudSaveResidency(newRes);
     setResidencies([...residencies, newRes]);
     setNewResidencyName('');
     showStatus('Residency created successfully!');
@@ -361,7 +363,7 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
 
             {/* Logout Confirm Dialog */}
             {showLogoutConfirm && (
-              <div onClick={e => e.stopPropagation()} className="animate-fade-in" style={{ position: 'absolute', top: '120%', right: 0, width: '250px', background: 'var(--bg-card)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '12px', padding: '1rem', boxShadow: '0 10px 25px rgba(0,0,0,0.5)', zIndex: 200, textAlign: 'center' }}>
+              <div onClick={e => e.stopPropagation()} className="guide-logout-modal animate-fade-in" style={{ position: 'absolute', top: '120%', right: 0, width: '250px', background: 'var(--bg-card)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '12px', padding: '1rem', boxShadow: '0 10px 25px rgba(0,0,0,0.5)', zIndex: 200, textAlign: 'center' }}>
                 <p style={{ color: '#f8fafc', margin: '0 0 1rem 0', fontSize: '0.9rem' }}>Are you sure you want to log out?</p>
                 <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
                   <button onClick={() => setShowLogoutConfirm(false)} className="nav-btn btn-secondary" style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }}>Cancel</button>
@@ -1104,7 +1106,7 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
 
         {/* ═══ RESIDENCIES TAB ═══ */}
         {!selectedDevotee && activeTab === 'residencies' && (
-          <div className="animate-fade-in" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+          <div className="campaign-split animate-fade-in" style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem' }}>
             <div className="panel">
               <h3 className="panel-title" style={{ marginBottom: '1.2rem', color: '#f59e0b' }}>🏠 Create New Residency</h3>
               <form onSubmit={handleCreateResidency} style={{ display: 'flex', gap: '0.8rem' }}>
@@ -1154,3 +1156,4 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
 };
 
 export default GuideDashboard;
+

@@ -58,6 +58,36 @@ export const cloudFetchNotifications = async () => {
   return JSON.parse(localStorage.getItem('sadhana_notifications') || '[]');
 };
 
+// 8. Residencies Sync
+export const cloudSaveResidency = async (residency) => {
+  if (isCloudActive && db) {
+    try {
+      await setDoc(doc(db, 'residencies', residency.id), residency);
+    } catch (e) {
+      console.error("Cloud Residency Save Error:", e);
+    }
+  }
+};
+
+export const cloudFetchResidencies = async () => {
+  if (isCloudActive && db) {
+    try {
+      const querySnapshot = await getDocs(collection(db, 'residencies'));
+      const cloudRes = [];
+      querySnapshot.forEach((doc) => {
+        cloudRes.push(doc.data());
+      });
+      if (cloudRes.length > 0) {
+        localStorage.setItem('sadhana_residencies', JSON.stringify(cloudRes));
+        return cloudRes;
+      }
+    } catch (e) {
+      console.warn("Using cached residencies:", e);
+    }
+  }
+  return JSON.parse(localStorage.getItem('sadhana_residencies') || '[]');
+};
+
 export { db, isCloudActive };
 
 // --- 🌐 CLOUD DATA SYNC API FUNCTIONS ---

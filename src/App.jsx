@@ -15,7 +15,7 @@ import GuideDashboard from './components/GuideDashboard';
 import { subDays, format } from 'date-fns';
 import { calculatePoints } from './utils/scoring';
 import {
-  cloudFetchAllUsers, cloudSaveUser, cloudFetchCampaigns, subscribeToCloudUpdates, cloudFetchNotifications
+  cloudFetchAllUsers, cloudSaveUser, cloudFetchCampaigns, subscribeToCloudUpdates, cloudFetchNotifications, cloudFetchResidencies
 } from './services/firebase';
 import { isCloudActive } from './services/firebase';
 
@@ -48,15 +48,15 @@ function App() {
     }
   }, []);
 
-  // ☁️ Cloud Startup Sync — Pull all users and notifications from Firebase on app load
+  // ☁️ Cloud Startup Sync — Pull all data from Firebase on app load
   useEffect(() => {
     cloudFetchAllUsers().catch(console.error);
     cloudFetchNotifications().catch(console.error);
+    cloudFetchResidencies().catch(console.error);
   }, []);
 
-  // Seed Dummy Data for new users and inject a dummy account
+  // Ensure Super Admin exists (only locally if cloud is not active yet)
   useEffect(() => {
-    // ALWAYS ensure Super Admin exists — runs on every load
     const allUsers = JSON.parse(localStorage.getItem('sadhana_users') || '[]');
     if (!allUsers.find(u => u.email === 'admin@folk.in')) {
       allUsers.push({
@@ -69,100 +69,7 @@ function App() {
       });
       localStorage.setItem('sadhana_users', JSON.stringify(allUsers));
     }
-
-    // Cleanup dummy accounts if previously seeded
-    const dummyEmails = [
-      'hrishikesh@folk.in', 'jagannath@folk.in',
-      'arjun@folk.com', 'govind@folk.com', 'madhav@folk.com', 'nimai@folk.com',
-      'prabhav@folk.com', 'radhe@folk.com', 'sanjay@folk.com', 'tarun@folk.com'
-    ];
-    let users = JSON.parse(localStorage.getItem('sadhana_users') || '[]');
-    const filteredUsers = users.filter(u => !dummyEmails.includes(u.email));
-    if (filteredUsers.length !== users.length) {
-      localStorage.setItem('sadhana_users', JSON.stringify(filteredUsers));
-      dummyEmails.forEach(email => {
-        localStorage.removeItem(`sadhana_history_${email}`);
-        localStorage.removeItem(`guide_campaigns_${email}`);
-        localStorage.removeItem(`sadhana_bucket_list_${email}`);
-      });
-    }
-
-    if (!currentUser || currentUser.role === 'admin' || currentUser.role === 'guide') return;
-    
-    const historyKey = `sadhana_history_${currentUser.email}`;
-    const bucketKey = `sadhana_bucket_list_${currentUser.email}`;
-    const initializedKey = `sadhana_init_${currentUser.email}`;
-
-    if (!localStorage.getItem(initializedKey)) {
-      const demoData = [];
-      for (let i = 0; i < 30; i++) {
-        const dateObj = subDays(new Date(), i);
-        const date = format(dateObj, 'yyyy-MM-dd');
-        
-        const isPerfect = Math.random() > 0.4;
-        const isPartial = !isPerfect && Math.random() > 0.5;
-        const isAbsent = !isPerfect && !isPartial;
-
-        const isResident = currentUser?.status === 'FOLK Resident';
-        const isNonResident = currentUser?.status === 'Non-FOLK Resident';
-        const isBeginner = currentUser?.status === 'Beginner';
-
-        const activityTimes = {
-          mangala_arati: (isResident && isPerfect) ? '05:00' : ((isResident && isPartial) ? '05:10' : ''),
-          japa: (isResident && isPerfect) ? '05:30' : ((isResident && isPartial) ? '05:45' : ''),
-          reading: (isResident && isPerfect) ? '06:30' : ((isResident && isPartial) ? '07:00' : ''),
-          class: (isResident && isPerfect) ? '07:00' : ((isResident && isPartial) ? '07:10' : ''),
-          yoga: (isResident && isPerfect) ? '07:30' : ''
-        };
-
-        let score = 0;
-        ['mangala_arati', 'japa', 'reading', 'class', 'yoga'].forEach(act => {
-          score += calculatePoints(act, activityTimes[act]);
-        });
-        score = Math.min(score, 20);
-
-        const absentReason = isAbsent ? (Math.random() > 0.5 ? 'Sick (Health not well)' : 'Authorized Travel') : '';
-
-        demoData.push({
-          date,
-          activityTimes,
-          attendance: {},
-          score,
-          details: {
-            sleepTime: isResident ? '22:00' : (isNonResident ? '23:00' : ''),
-            wakeupTime: isResident ? '04:00' : (isNonResident ? '05:30' : ''),
-            totalRounds: isResident ? '16' : (isNonResident ? '8' : '4'),
-            chantingCompletionTime: isPerfect ? '07:30' : (isPartial ? '08:00' : ''),
-            readingDuration: isResident ? '45' : '30',
-            bookName: isNonResident ? 'Bhagavad Gita As It Is' : '',
-            hearingDuration: !isResident ? '20' : '',
-            absentReason: absentReason
-          }
-        });
-      }
-      localStorage.setItem(historyKey, JSON.stringify(demoData));
-      
-      const goals = {
-        seva: [
-          { id: '1', title: 'Organize Sunday Feast', status: 'progress', remark: '' },
-          { id: '2', title: 'Clean Altar Room', status: 'completed', remark: 'Done nicely.' }
-        ],
-        topics: [
-          { id: 't1', title: 'Who is God', status: 'completed' },
-          { id: 't2', title: 'Who am I', status: 'progress' },
-          { id: 't3', title: 'Why bad things happen to good people', status: 'todo' }
-        ],
-        books: [
-          { id: 'b1', title: 'Bhagavad Gita As It Is', status: 'reading', startDate: '2026-06-01' },
-          { id: 'b2', title: 'Science of Self Realization', status: 'completed', startDate: '2026-05-01' }
-        ]
-      };
-      localStorage.setItem(bucketKey, JSON.stringify(goals));
-      localStorage.setItem(initializedKey, 'true');
-      
-      window.dispatchEvent(new Event('storage'));
-    }
-  }, [currentUser]);
+  }, []);
 
   useEffect(() => {
     const handleNav = (e) => {
