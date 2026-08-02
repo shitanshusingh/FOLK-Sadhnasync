@@ -1,0 +1,549 @@
+import { useState, useEffect, useRef } from 'react';
+import { Home, Calendar, Timer, CheckSquare, Settings, LogOut, Package, Download, Upload, X, User as UserIcon, Bell, Trophy, BookOpen, Cloud } from 'lucide-react';
+import folkLogo from './assets/folk_logo.png';
+import iskconLogo from './assets/iskcon_logo.png';
+import SadhanaTracker from './components/SadhanaTracker';
+import Dashboard from './components/Dashboard';
+import BucketList from './components/BucketList';
+import FocusTimer from './components/FocusTimer';
+import Auth from './components/Auth';
+import Profile from './components/Profile';
+import SettingsModal from './components/SettingsModal';
+import Leaderboard from './components/Leaderboard';
+import AdminDashboard from './components/AdminDashboard';
+import GuideDashboard from './components/GuideDashboard';
+import { subDays, format } from 'date-fns';
+import { calculatePoints } from './utils/scoring';
+import {
+  cloudFetchAllUsers, cloudSaveUser, cloudFetchCampaigns, subscribeToCloudUpdates
+} from './services/firebase';
+import { isCloudActive } from './services/firebase';
+
+function App() {
+  const [currentUser, setCurrentUser] = useState(() => JSON.parse(localStorage.getItem('sadhana_current_user') || 'null'));
+  const [currentTab, setCurrentTab] = useState('dashboard');
+  const [prefilledDate, setPrefilledDate] = useState(null);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [clearedNotifs, setClearedNotifs] = useState(() => JSON.parse(localStorage.getItem('sadhana_cleared_notifs') || '[]'));
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const fileInputRef = useRef(null);
+
+  // Apply Theme on Load
+  useEffect(() => {
+    const savedColor = localStorage.getItem('sadhana_theme');
+    if (savedColor) {
+      document.documentElement.style.setProperty('--primary-amber', savedColor);
+      document.documentElement.style.setProperty('--primary-glow', `${savedColor}40`); 
+      document.documentElement.style.setProperty('--border-highlight', `${savedColor}66`);
+    }
+
+    const savedMode = localStorage.getItem('sadhana_theme_mode');
+    if (savedMode === 'light') {
+      document.documentElement.classList.add('light-mode');
+    } else {
+      document.documentElement.classList.remove('light-mode');
+    }
+  }, []);
+
+  // ☁️ Cloud Startup Sync — Pull all users from Firebase on app load
+  useEffect(() => {
+    cloudFetchAllUsers().then(cloudUsers => {
+      if (cloudUsers.length > 0) {
+        // Merge cloud users into local cache (cloud wins for existing records)
+        const local = JSON.parse(localStorage.getItem('sadhana_users') || '[]');
+        const merged = [...local];
+        cloudUsers.forEach(cu => {
+          if (!merged.find(u => u.email === cu.email)) merged.push(cu);
+        });
+        localStorage.setItem('sadhana_users', JSON.stringify(merged));
+        window.dispatchEvent(new Event('storage'));
+      }
+    }).catch(() => {}); // Graceful fallback to localStorage
+  }, []);
+
+  // Seed Dummy Data for new users and inject a dummy account
+  useEffect(() => {
+    // ALWAYS ensure Super Admin exists — runs on every load
+    const allUsers = JSON.parse(localStorage.getItem('sadhana_users') || '[]');
+    if (!allUsers.find(u => u.email === 'admin@folk.in')) {
+      allUsers.push({
+        photo: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Admin',
+        name: 'Super Admin',
+        phone: '0000000000',
+        email: 'admin@folk.in',
+        password: 'admin',
+        role: 'admin'
+      });
+      localStorage.setItem('sadhana_users', JSON.stringify(allUsers));
+    }
+
+    // Cleanup dummy accounts if previously seeded
+    const dummyEmails = [
+      'hrishikesh@folk.in', 'jagannath@folk.in',
+      'arjun@folk.com', 'govind@folk.com', 'madhav@folk.com', 'nimai@folk.com',
+      'prabhav@folk.com', 'radhe@folk.com', 'sanjay@folk.com', 'tarun@folk.com'
+    ];
+    let users = JSON.parse(localStorage.getItem('sadhana_users') || '[]');
+    const filteredUsers = users.filter(u => !dummyEmails.includes(u.email));
+    if (filteredUsers.length !== users.length) {
+      localStorage.setItem('sadhana_users', JSON.stringify(filteredUsers));
+      dummyEmails.forEach(email => {
+        localStorage.removeItem(`sadhana_history_${email}`);
+        localStorage.removeItem(`guide_campaigns_${email}`);
+        localStorage.removeItem(`sadhana_bucket_list_${email}`);
+      });
+    }
+
+    if (!currentUser || currentUser.role === 'admin' || currentUser.role === 'guide') return;
+    
+    const historyKey = `sadhana_history_${currentUser.email}`;
+    const bucketKey = `sadhana_bucket_list_${currentUser.email}`;
+    const initializedKey = `sadhana_init_${currentUser.email}`;
+
+    if (!localStorage.getItem(initializedKey)) {
+      const demoData = [];
+      for (let i = 0; i < 30; i++) {
+        const dateObj = subDays(new Date(), i);
+        const date = format(dateObj, 'yyyy-MM-dd');
+        
+        const isPerfect = Math.random() > 0.4;
+        const isPartial = !isPerfect && Math.random() > 0.5;
+        const isAbsent = !isPerfect && !isPartial;
+
+        const isResident = currentUser?.status === 'FOLK Resident';
+        const isNonResident = currentUser?.status === 'Non-FOLK Resident';
+        const isBeginner = currentUser?.status === 'Beginner';
+
+        const activityTimes = {
+          mangala_arati: (isResident && isPerfect) ? '05:00' : ((isResident && isPartial) ? '05:10' : ''),
+          japa: (isResident && isPerfect) ? '05:30' : ((isResident && isPartial) ? '05:45' : ''),
+          reading: (isResident && isPerfect) ? '06:30' : ((isResident && isPartial) ? '07:00' : ''),
+          class: (isResident && isPerfect) ? '07:00' : ((isResident && isPartial) ? '07:10' : ''),
+          yoga: (isResident && isPerfect) ? '07:30' : ''
+        };
+
+        let score = 0;
+        ['mangala_arati', 'japa', 'reading', 'class', 'yoga'].forEach(act => {
+          score += calculatePoints(act, activityTimes[act]);
+        });
+        score = Math.min(score, 20);
+
+        const absentReason = isAbsent ? (Math.random() > 0.5 ? 'Sick (Health not well)' : 'Authorized Travel') : '';
+
+        demoData.push({
+          date,
+          activityTimes,
+          attendance: {},
+          score,
+          details: {
+            sleepTime: isResident ? '22:00' : (isNonResident ? '23:00' : ''),
+            wakeupTime: isResident ? '04:00' : (isNonResident ? '05:30' : ''),
+            totalRounds: isResident ? '16' : (isNonResident ? '8' : '4'),
+            chantingCompletionTime: isPerfect ? '07:30' : (isPartial ? '08:00' : ''),
+            readingDuration: isResident ? '45' : '30',
+            bookName: isNonResident ? 'Bhagavad Gita As It Is' : '',
+            hearingDuration: !isResident ? '20' : '',
+            absentReason: absentReason
+          }
+        });
+      }
+      localStorage.setItem(historyKey, JSON.stringify(demoData));
+      
+      const goals = {
+        seva: [
+          { id: '1', title: 'Organize Sunday Feast', status: 'progress', remark: '' },
+          { id: '2', title: 'Clean Altar Room', status: 'completed', remark: 'Done nicely.' }
+        ],
+        topics: [
+          { id: 't1', title: 'Who is God', status: 'completed' },
+          { id: 't2', title: 'Who am I', status: 'progress' },
+          { id: 't3', title: 'Why bad things happen to good people', status: 'todo' }
+        ],
+        books: [
+          { id: 'b1', title: 'Bhagavad Gita As It Is', status: 'reading', startDate: '2026-06-01' },
+          { id: 'b2', title: 'Science of Self Realization', status: 'completed', startDate: '2026-05-01' }
+        ]
+      };
+      localStorage.setItem(bucketKey, JSON.stringify(goals));
+      localStorage.setItem(initializedKey, 'true');
+      
+      window.dispatchEvent(new Event('storage'));
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
+    const handleNav = (e) => {
+      setCurrentTab('tracker');
+      if (e.detail && e.detail.date) {
+        setPrefilledDate(e.detail.date);
+      }
+    };
+    window.addEventListener('navigate-to-tracker', handleNav);
+    return () => window.removeEventListener('navigate-to-tracker', handleNav);
+  }, []);
+
+  // OS-level Notification Logic
+  useEffect(() => {
+    if (!currentUser || currentUser.role === 'admin' || currentUser.role === 'guide') return;
+    
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+
+    const checkAndNotify = () => {
+      if (!('Notification' in window) || Notification.permission !== 'granted') return;
+
+      const historyStr = localStorage.getItem(`sadhana_history_${currentUser.email}`);
+      let history = [];
+      if (historyStr) {
+        try { history = JSON.parse(historyStr); } catch(e){}
+      }
+      
+      const today = new Date();
+      const todayStr = format(today, 'yyyy-MM-dd');
+      const yesterdayStr = format(subDays(today, 1), 'yyyy-MM-dd');
+      
+      const todayEntry = history.find(h => h.date === todayStr);
+      const yesterdayEntry = history.find(h => h.date === yesterdayStr);
+      
+      const isResident = currentUser.status === 'FOLK Resident';
+      const isTodayPending = !todayEntry || (isResident ? todayEntry.score === 0 : !todayEntry.details?.totalRounds);
+      const isYesterdayPending = !yesterdayEntry || (isResident ? yesterdayEntry.score === 0 : !yesterdayEntry.details?.totalRounds);
+      
+      const hour = today.getHours();
+      
+      let message = "";
+      if (isYesterdayPending && (isTodayPending && hour >= 12)) {
+        message = "Your Sādhana for yesterday and today (past 12:00 PM) is pending!";
+      } else if (isYesterdayPending) {
+        message = "Your Sādhana for yesterday is still pending!";
+      } else if (isTodayPending && hour >= 12) {
+        message = "It is past 12:00 PM. Please take a moment to fill your Sādhana for today.";
+      }
+      
+      if (message) {
+        const lastNotifiedKey = `sadhana_last_notified_${currentUser.email}`;
+        const lastNotifiedTime = localStorage.getItem(lastNotifiedKey);
+        const now = today.getTime();
+        
+        // 2 hours = 2 * 60 * 60 * 1000 = 7200000 ms
+        if (!lastNotifiedTime || now - parseInt(lastNotifiedTime, 10) >= 7200000) {
+          new Notification("Sādhana Pending!", {
+            body: message
+          });
+          localStorage.setItem(lastNotifiedKey, now.toString());
+        }
+      }
+    };
+
+    checkAndNotify();
+    // Check frequently enough so we don't miss the 2-hour window
+    const intervalId = setInterval(checkAndNotify, 600000); // Every 10 mins
+    
+    return () => clearInterval(intervalId);
+  }, [currentUser]);
+
+  const handleLogin = (user) => {
+    setCurrentUser(user);
+    localStorage.setItem('sadhana_current_user', JSON.stringify(user));
+    // ☁️ Sync user profile to Cloud DB on every login/registration
+    cloudSaveUser(user);
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    setCurrentTab('dashboard');
+    localStorage.removeItem('sadhana_current_user');
+    setShowLogoutConfirm(false);
+  };
+
+  const handleClearNotifications = () => {
+    if (notifications.length > 0) {
+      const newCleared = [...clearedNotifs, ...notifications.map(n => n.id)];
+      setClearedNotifs(newCleared);
+      localStorage.setItem('sadhana_cleared_notifs', JSON.stringify(newCleared));
+    }
+  };
+
+  if (!currentUser) {
+    return <Auth onAuthSuccess={handleLogin} />;
+  }
+
+  const handleSwitchBackToAdmin = () => {
+    const adminUser = JSON.parse(localStorage.getItem('sadhana_users') || '[]').find(u => u.role === 'admin');
+    if (adminUser) handleLogin(adminUser);
+  };
+
+  if (currentUser.role === 'admin') {
+    return <AdminDashboard currentUser={currentUser} onLogout={handleLogout} onLoginAsUser={handleLogin} />;
+  }
+
+  if (currentUser.role === 'guide') {
+    return (
+      <div>
+        {currentUser._isImpersonated && (
+          <div style={{ background: 'linear-gradient(90deg, #f59e0b, #ea580c)', padding: '0.6rem 1rem', color: '#fff', fontSize: '0.85rem', fontWeight: '800', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 9999 }}>
+            <span>⚠️ Super Admin Mode: Viewing as FOLK Guide ({currentUser.name})</span>
+            <button onClick={handleSwitchBackToAdmin} style={{ background: '#fff', color: '#ea580c', border: 'none', padding: '0.3rem 0.8rem', borderRadius: '8px', fontWeight: '800', cursor: 'pointer' }}>
+              ← Return to Super Admin Panel
+            </button>
+          </div>
+        )}
+        <GuideDashboard currentUser={currentUser} onLogout={handleLogout} />
+      </div>
+    );
+  }
+
+  // Derive notifications dynamically
+  const getNotifications = () => {
+    const notifs = [];
+    const today = new Date();
+    const todayStr = format(today, 'yyyy-MM-dd');
+    const todayMonthDay = format(today, 'MM-dd');
+    const hour = today.getHours();
+    
+    // Check if sadhana is filled
+    const historyStr = localStorage.getItem(`sadhana_history_${currentUser.email}`);
+    let history = [];
+    if (historyStr) {
+      try { history = JSON.parse(historyStr); } catch(e){}
+    }
+    const todayEntry = history.find(h => h.date === todayStr);
+    
+    if (hour >= 12 && (!todayEntry || todayEntry.score === 0)) {
+      notifs.push({
+        id: `sadhana_pending_${todayStr}`,
+        title: 'Sādhana Pending!',
+        message: 'It is past 12:00 PM. Please fill your Sādhana for today.',
+        type: 'warning'
+      });
+    }
+
+    // Dynamic Birthday Notifications
+    const allUsers = JSON.parse(localStorage.getItem('sadhana_users') || '[]');
+    allUsers.forEach(u => {
+      if (u.email !== currentUser.email && u.guide === currentUser.guide && u.residency === currentUser.residency && u.dob) {
+        // dob format: YYYY-MM-DD
+        const userDob = u.dob.substring(5); // gets MM-DD
+        if (userDob === todayMonthDay) {
+          notifs.push({
+            id: `bday_${u.email}_${todayStr}`,
+            title: `🎉 ${u.name}'s Birthday!`,
+            message: `Today is ${u.name}'s birthday! Wish them well.`,
+            type: 'info'
+          });
+        }
+      }
+    });
+
+    // Global Broadcasts
+    const broadcasts = JSON.parse(localStorage.getItem('sadhana_global_broadcasts') || '[]');
+    broadcasts.forEach(b => {
+      notifs.push({
+        id: b.id,
+        title: `📢 ${b.sender} Broadcast`,
+        message: b.message,
+        type: 'info'
+      });
+    });
+
+    // Filter out cleared notifications
+    return notifs.filter(n => !clearedNotifs.includes(n.id));
+  };
+
+  const notifications = getNotifications();
+
+  const renderContent = () => {
+    switch (currentTab) {
+      case 'dashboard':
+        return <Dashboard currentUser={currentUser} setActiveTab={setCurrentTab} setPrefilledDate={setPrefilledDate} />;
+      case 'tracker':
+        return <SadhanaTracker currentUser={currentUser} prefilledDate={prefilledDate} />;
+      case 'goals':
+        return <BucketList currentUser={currentUser} />;
+      case 'timer':
+        return <FocusTimer currentUser={currentUser} />;
+      case 'leaderboard':
+        return <Leaderboard currentUser={currentUser} />;
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="app-container">
+      {/* Background glow effects */}
+      <div className="glow-sphere" style={{ top: '-10%', left: '-10%' }}></div>
+      <div className="glow-sphere" style={{ bottom: '-20%', right: '-10%', background: 'var(--accent-blue)', opacity: 0.08 }}></div>
+      
+      <header className="navbar">
+        <div className="nav-content">
+          <div className="brand" onClick={() => setCurrentTab('dashboard')} style={{ cursor: 'pointer' }}>
+            <img src={folkLogo} alt="FOLK Logo" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', boxShadow: '0 0 15px rgba(245,158,11,0.4)' }} />
+            <div className="brand-text">
+              <h1>FOLK SadhnaSync</h1>
+              <p>ISKCON BHADAJ, AHMEDABAD • <span style={{color: 'var(--accent-blue)'}}>● {currentUser.name}</span></p>
+            </div>
+          </div>
+
+          <div className="nav-actions">
+            <button className="nav-btn btn-primary" onClick={() => setCurrentTab('tracker')}>
+              <Package size={16} /> Fill Tracker
+            </button>
+            <button className="nav-btn btn-indigo" onClick={() => setCurrentTab('goals')}>
+              <CheckSquare size={16} /> Bucket List
+            </button>
+
+            {/* ☁️ Tiny Cloud Sync Status Indicator */}
+            <div title={isCloudActive ? 'Cloud Connected — plk-sadhnasync' : 'Offline Mode'} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', width: '32px', height: '32px', cursor: 'default' }}>
+              <Cloud size={16} style={{ color: isCloudActive ? '#10b981' : '#f43f5e', opacity: 0.9 }} />
+              <span style={{
+                position: 'absolute',
+                bottom: '3px',
+                right: '3px',
+                width: '6px',
+                height: '6px',
+                borderRadius: '50%',
+                background: isCloudActive ? '#10b981' : '#f43f5e',
+                border: '1.5px solid var(--bg-main)',
+                animation: isCloudActive ? 'cloud-pulse 1.8s ease-in-out infinite' : 'none'
+              }} />
+            </div>
+            <style>{`
+              @keyframes cloud-pulse {
+                0%, 100% { opacity: 1; transform: scale(1); }
+                50% { opacity: 0.3; transform: scale(0.6); }
+              }
+            `}</style>
+
+            {/* Notifications Button */}
+            <div style={{ position: 'relative' }}>
+              <button className="nav-btn btn-secondary" style={{ position: 'relative' }} onClick={() => setShowNotifications(!showNotifications)}>
+                <Bell size={18} />
+                {notifications.length > 0 && (
+                  <span style={{ position: 'absolute', top: '-4px', right: '-4px', background: '#ef4444', color: 'white', borderRadius: '50%', width: '16px', height: '16px', fontSize: '0.65rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
+                    {notifications.length}
+                  </span>
+                )}
+              </button>
+              
+              {showNotifications && (
+                <div className="animate-fade-in" style={{ position: 'absolute', top: '120%', right: 0, width: '320px', background: 'var(--bg-card)', border: '1px solid var(--border-highlight)', borderRadius: '12px', padding: '1rem', boxShadow: '0 10px 25px rgba(0,0,0,0.5)', zIndex: 100 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.5rem' }}>
+                    <h4 style={{ margin: 0, color: 'var(--text-main)' }}>Notifications</h4>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      {notifications.length > 0 && (
+                        <button onClick={handleClearNotifications} style={{ background: 'none', border: 'none', color: 'var(--primary-amber)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold' }}>Clear All</button>
+                      )}
+                      <button onClick={() => setShowNotifications(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={16} /></button>
+                    </div>
+                  </div>
+                  
+                  {notifications.length === 0 ? (
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', textAlign: 'center' }}>No new notifications.</p>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', maxHeight: '300px', overflowY: 'auto' }}>
+                      {notifications.map(n => (
+                        <div key={n.id} style={{ background: 'var(--bg-main)', padding: '0.8rem', borderRadius: '8px', borderLeft: `3px solid ${n.type === 'warning' ? '#f59e0b' : '#3b82f6'}` }}>
+                          <h5 style={{ margin: '0 0 0.3rem 0', color: 'var(--text-main)', fontSize: '0.95rem' }}>{n.title}</h5>
+                          <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.85rem' }}>{n.message}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* User Profile Button */}
+            <button className="nav-btn btn-secondary" style={{ padding: '0.4rem', borderRadius: '50%', overflow: 'hidden' }} onClick={() => setShowProfile(true)}>
+              {currentUser.photo ? (
+                <img src={currentUser.photo} alt="Profile" style={{ width: '28px', height: '28px', objectFit: 'cover', borderRadius: '50%' }} />
+              ) : (
+                <UserIcon size={18} />
+              )}
+            </button>
+
+            <button className="nav-btn btn-secondary" onClick={() => setShowSettings(true)}>
+              <Settings size={18} />
+            </button>
+            <button className="nav-btn btn-rose" style={{ padding: '0.6rem', position: 'relative' }} onClick={() => setShowLogoutConfirm(true)}>
+              <LogOut size={18} />
+              {showLogoutConfirm && (
+                <div onClick={e => e.stopPropagation()} className="animate-fade-in" style={{ position: 'absolute', top: '120%', right: 0, width: '250px', background: 'var(--bg-card)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '12px', padding: '1rem', boxShadow: '0 10px 25px rgba(0,0,0,0.5)', zIndex: 100, textAlign: 'center' }}>
+                  <p style={{ color: '#f8fafc', margin: '0 0 1rem 0', fontSize: '0.9rem', whiteSpace: 'normal' }}>Are you sure you want to log out?</p>
+                  <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                    <button onClick={(e) => { e.stopPropagation(); setShowLogoutConfirm(false); }} className="nav-btn btn-secondary" style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }}>Cancel</button>
+                    <button onClick={(e) => { e.stopPropagation(); handleLogout(); }} className="nav-btn btn-rose" style={{ padding: '0.4rem 1rem', fontSize: '0.85rem', fontWeight: 'bold' }}>Yes</button>
+                  </div>
+                </div>
+              )}
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <nav className="tabs-bar">
+        <div className="tabs-container">
+          <button className={`tab-item ${currentTab === 'dashboard' ? 'active' : ''}`} onClick={() => setCurrentTab('dashboard')}>
+            <Calendar size={16} /> 1. Analytics & Dashboard
+          </button>
+          <button className={`tab-item ${currentTab === 'tracker' ? 'active' : ''}`} onClick={() => setCurrentTab('tracker')}>
+            <Home size={16} /> 2. Sadhana Entry
+          </button>
+          <button className={`tab-item ${currentTab === 'leaderboard' ? 'active' : ''}`} onClick={() => setCurrentTab('leaderboard')}>
+            <Trophy size={16} /> 3. Leaderboard
+          </button>
+          <button className={`tab-item ${currentTab === 'goals' ? 'active' : ''}`} onClick={() => setCurrentTab('goals')}>
+            <CheckSquare size={16} /> 4. Bucket List
+          </button>
+          <button className={`tab-item ${currentTab === 'timer' ? 'active' : ''}`} onClick={() => setCurrentTab('timer')}>
+            <Timer size={16} /> 5. Focus Timer
+          </button>
+        </div>
+      </nav>
+
+      <main className="main-content">
+        {renderContent()}
+      </main>
+
+      <footer style={{
+        marginTop: '3rem',
+        padding: '1.5rem 2rem',
+        borderTop: '1px solid var(--border-subtle)',
+        background: 'rgba(11, 17, 30, 0.4)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justify: 'center',
+        gap: '1rem'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+          <img src={folkLogo} alt="FOLK Logo" style={{ height: '42px', objectFit: 'contain' }} />
+          <img src={iskconLogo} alt="ISKCON Logo" style={{ height: '42px', objectFit: 'contain', borderRadius: '8px' }} />
+        </div>
+        <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.8rem', textAlign: 'center' }}>
+          © 2026 All rights reserved | ISKCON Bhadaj, Ahmedabad | Managed by FOLK
+        </p>
+      </footer>
+
+      {/* Settings Modal */}
+      {showSettings && (
+        <SettingsModal 
+          user={currentUser} 
+          onClose={() => setShowSettings(false)} 
+          onLogout={handleLogout} 
+        />
+      )}
+
+      {/* Profile Modal */}
+      {showProfile && (
+        <Profile user={currentUser} onClose={() => setShowProfile(false)} onLogout={handleLogout} />
+      )}
+    </div>
+  );
+}
+
+export default App;
