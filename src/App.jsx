@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Home, Calendar, Timer, CheckSquare, Settings, LogOut, Package, Download, Upload, X, User as UserIcon, Bell, Trophy, BookOpen, Cloud } from 'lucide-react';
+import { Home, Calendar, Timer, CheckSquare, Settings, LogOut, Package, Download, Upload, X, User as UserIcon, Bell, Trophy, BookOpen, Cloud, Menu } from 'lucide-react';
 import folkLogo from './assets/folk_logo.png';
 import iskconLogo from './assets/iskcon_logo.png';
 import SadhanaTracker from './components/SadhanaTracker';
@@ -15,7 +15,7 @@ import GuideDashboard from './components/GuideDashboard';
 import { subDays, format } from 'date-fns';
 import { calculatePoints } from './utils/scoring';
 import {
-  cloudFetchAllUsers, cloudSaveUser, cloudFetchCampaigns, subscribeToCloudUpdates, cloudFetchNotifications, cloudFetchResidencies, cloudSaveResidency
+  cloudFetchAllUsers, cloudSaveUser, cloudFetchCampaigns, subscribeToCloudUpdates, cloudFetchNotifications, cloudFetchResidencies, cloudSaveResidency, cloudFetchAllSadhanaHistories
 } from './services/firebase';
 import { isCloudActive } from './services/firebase';
 
@@ -27,6 +27,7 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [clearedNotifs, setClearedNotifs] = useState(() => JSON.parse(localStorage.getItem('sadhana_cleared_notifs') || '[]'));
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const fileInputRef = useRef(null);
@@ -48,9 +49,10 @@ function App() {
     }
   }, []);
 
-  // ☁️ Cloud Startup Sync & Deep Root Real-Time Listeners
+  // 🚀 Cloud Startup Sync & Deep Root Real-Time Listeners
   useEffect(() => {
     cloudFetchAllUsers().catch(console.error);
+    cloudFetchAllSadhanaHistories().catch(console.error);
     cloudFetchNotifications().catch(console.error);
     cloudFetchResidencies().then(() => {
       // ONE-TIME MIGRATION: Push local residencies to cloud if not already synced
@@ -344,23 +346,25 @@ function App() {
             Exit Live View
           </button>
         </div>
-      )}
-
       {/* Background glow effects */}
       <div className="glow-sphere" style={{ top: '-10%', left: '-10%' }}></div>
       <div className="glow-sphere" style={{ bottom: '-20%', right: '-10%', background: 'var(--accent-blue)', opacity: 0.08 }}></div>
       
       <header className="navbar">
-        <div className="nav-content">
+        <div className="nav-content" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
           <div className="brand" onClick={() => setCurrentTab('dashboard')} style={{ cursor: 'pointer' }}>
             <img src={folkLogo} alt="FOLK Logo" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', boxShadow: '0 0 15px rgba(245,158,11,0.4)' }} />
             <div className="brand-text">
               <h1>FOLK SadhnaSync</h1>
-              <p>ISKCON BHADAJ, AHMEDABAD • <span style={{color: impersonatingUser ? '#ef4444' : 'var(--accent-blue)'}}>● {activeUser.name} {impersonatingUser ? '(Live View)' : ''}</span></p>
+              <p>ISKCON BHADAJ, AHMEDABAD • <span style={{color: impersonatingUser ? '#ef4444' : 'var(--accent-blue)'}}>★ {activeUser.name} {impersonatingUser ? '(Live View)' : ''}</span></p>
             </div>
           </div>
+          
+          <button className="mobile-menu-btn" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} style={{ background: 'transparent', border: 'none', color: 'var(--text-main)', cursor: 'pointer' }}>
+             {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
 
-          <div className="nav-actions">
+          <div className={`nav-actions ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
             <button className="nav-btn btn-primary" onClick={() => setCurrentTab('tracker')}>
               <Package size={16} /> Fill Tracker
             </button>
@@ -432,7 +436,7 @@ function App() {
         </div>
       </header>
 
-      <nav className="tabs-bar">
+      <nav className="tabs-bar main-bottom-nav">
         <div className="tabs-container">
           <button className={`tab-item ${currentTab === 'dashboard' ? 'active' : ''}`} onClick={() => setCurrentTab('dashboard')}>
             <Calendar size={18} /> <span>Dashboard</span>

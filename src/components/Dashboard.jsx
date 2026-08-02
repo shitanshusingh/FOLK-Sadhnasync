@@ -553,6 +553,11 @@ const Dashboard = ({ currentUser, setActiveTab, setPrefilledDate }) => {
 
   // WhatsApp Style Sadhana Status Feed
   const [feedModalUser, setFeedModalUser] = useState(null);
+  const yesterdayStr = format(subDays(today, 1), 'yyyy-MM-dd');
+  const [viewedStories, setViewedStories] = useState(() => 
+    JSON.parse(localStorage.getItem(`sadhana_viewed_stories_${currentUser.email}_${todayStr}`) || '[]')
+  );
+
   const todayFeedUsers = useMemo(() => {
     const allRegisteredUsers = JSON.parse(localStorage.getItem('sadhana_users') || '[]');
     const matchedUsers = allRegisteredUsers.filter(u => 
@@ -567,12 +572,30 @@ const Dashboard = ({ currentUser, setActiveTab, setPrefilledDate }) => {
     for (const u of matchedUsers) {
        const userHistory = JSON.parse(localStorage.getItem(`sadhana_history_${u.email}`) || '[]');
        const todayEntry = userHistory.find(e => e.date === todayStr);
-       if (todayEntry && todayEntry.score > 0) {
-          active.push({ user: u, entry: todayEntry });
+       const yesterdayEntry = userHistory.find(e => e.date === yesterdayStr);
+       
+       const latestEntry = (todayEntry && todayEntry.score > 0) ? todayEntry 
+                         : (yesterdayEntry && yesterdayEntry.score > 0) ? yesterdayEntry 
+                         : null;
+
+       if (latestEntry) {
+          active.push({ user: u, entry: latestEntry });
        }
     }
-    return active.sort((a, b) => b.entry.score - a.entry.score);
-  }, [currentUser, todayStr]);
+    
+    return active.sort((a, b) => {
+      if (a.user.email === currentUser.email) return -1;
+      if (b.user.email === currentUser.email) return 1;
+      
+      const aViewed = viewedStories.includes(a.user.email);
+      const bViewed = viewedStories.includes(b.user.email);
+      
+      if (!aViewed && bViewed) return -1;
+      if (aViewed && !bViewed) return 1;
+      
+      return b.entry.score - a.entry.score;
+    });
+  }, [currentUser, todayStr, yesterdayStr, viewedStories]);
 
   return (
     <div className="animate-fade-in" style={{ paddingBottom: '4rem', maxWidth: '1050px', margin: '0 auto', position: 'relative' }}>
@@ -586,9 +609,19 @@ const Dashboard = ({ currentUser, setActiveTab, setPrefilledDate }) => {
           <div style={{ display: 'flex', gap: '15px', overflowX: 'auto', padding: '5px', scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }} className="hide-scrollbar">
             {todayFeedUsers.map(feed => {
               const isMe = feed.user.email === currentUser.email;
+              const isViewed = viewedStories.includes(feed.user.email);
+              const ringColor = isViewed ? 'linear-gradient(45deg, #94a3b8 0%, #64748b 100%)' : 'linear-gradient(45deg, #10b981 0%, #059669 100%)';
+              
               return (
-                <div key={feed.user.email} onClick={() => setFeedModalUser(feed)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', cursor: 'pointer', flexShrink: 0, transition: 'transform 0.2s' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
-                  <div style={{ width: '60px', height: '60px', borderRadius: '50%', padding: '3px', background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)' }}>
+                <div key={feed.user.email} onClick={() => {
+                  setFeedModalUser(feed);
+                  if (!isViewed) {
+                    const updated = [...viewedStories, feed.user.email];
+                    setViewedStories(updated);
+                    localStorage.setItem(`sadhana_viewed_stories_${currentUser.email}_${todayStr}`, JSON.stringify(updated));
+                  }
+                }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', cursor: 'pointer', flexShrink: 0, transition: 'transform 0.2s' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
+                  <div style={{ width: '60px', height: '60px', borderRadius: '50%', padding: '3px', background: ringColor }}>
                     <div style={{ width: '100%', height: '100%', borderRadius: '50%', border: '2px solid var(--bg-main)', overflow: 'hidden', background: 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1.2rem', color: 'var(--text-main)' }}>
                       {feed.user.photo ? <img src={feed.user.photo} alt={feed.user.name} style={{width:'100%', height:'100%', objectFit:'cover'}} /> : feed.user.name.substring(0,2).toUpperCase()}
                     </div>
@@ -1322,40 +1355,58 @@ const Dashboard = ({ currentUser, setActiveTab, setPrefilledDate }) => {
       )}
 
       {/* WhatsApp Status Modal */}
-      {feedModalUser && createPortal(
-        <div style={{ position: 'fixed', inset: 0, zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)' }} onClick={() => setFeedModalUser(null)}>
-          <div className="animate-fade-in" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '24px', width: '100%', maxWidth: '360px', padding: '2rem', position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }} onClick={e => e.stopPropagation()}>
-            <button onClick={() => setFeedModalUser(null)} style={{ position: 'absolute', top: '15px', right: '15px', background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-              <X size={18} />
-            </button>
-            
-            <div style={{ width: '90px', height: '90px', borderRadius: '50%', padding: '4px', background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)', marginBottom: '1rem' }}>
-              <div style={{ width: '100%', height: '100%', borderRadius: '50%', border: '3px solid var(--bg-card)', overflow: 'hidden', background: 'var(--bg-input)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', fontWeight: 'bold' }}>
-                {feedModalUser.user.photo ? <img src={feedModalUser.user.photo} alt="Avatar" style={{width:'100%', height:'100%', objectFit:'cover'}} /> : feedModalUser.user.name.substring(0,2).toUpperCase()}
+      {feedModalUser && (() => {
+        const modalIsViewed = viewedStories.includes(feedModalUser.user.email);
+        const modalRingColor = modalIsViewed ? 'linear-gradient(45deg, #94a3b8 0%, #64748b 100%)' : 'linear-gradient(45deg, #10b981 0%, #059669 100%)';
+        const attendedMA = feedModalUser.entry.activityTimes?.mangala_arati ? 'Yes' : 'No';
+
+        return createPortal(
+          <div style={{ position: 'fixed', inset: 0, zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)' }} onClick={() => setFeedModalUser(null)}>
+            <div className="animate-fade-in" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '24px', width: '100%', maxWidth: '360px', padding: '2rem', position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }} onClick={e => e.stopPropagation()}>
+              <button onClick={() => setFeedModalUser(null)} style={{ position: 'absolute', top: '15px', right: '15px', background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                <X size={18} />
+              </button>
+              
+              <div style={{ width: '90px', height: '90px', borderRadius: '50%', padding: '4px', background: modalRingColor, marginBottom: '1rem' }}>
+                <div style={{ width: '100%', height: '100%', borderRadius: '50%', border: '3px solid var(--bg-card)', overflow: 'hidden', background: 'var(--bg-input)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', fontWeight: 'bold' }}>
+                  {feedModalUser.user.photo ? <img src={feedModalUser.user.photo} alt="Avatar" style={{width:'100%', height:'100%', objectFit:'cover'}} /> : feedModalUser.user.name.substring(0,2).toUpperCase()}
+                </div>
+              </div>
+              
+              <h3 style={{ margin: '0 0 5px 0', fontSize: '1.4rem', color: 'var(--text-main)', fontWeight: '800' }}>{feedModalUser.user.name}</h3>
+              <p style={{ margin: '0 0 1.5rem 0', color: 'var(--primary-amber)', fontWeight: '600', fontSize: '0.9rem' }}>{format(parseISO(feedModalUser.entry.date), 'do MMM')} Sādhana Complete! 🎉</p>
+              
+              <div style={{ width: '100%', background: 'rgba(0,0,0,0.2)', borderRadius: '16px', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}><Clock size={14} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }}/>Wake Up Time</span>
+                  <span style={{ fontWeight: '800', color: '#8b5cf6', fontSize: '1.1rem' }}>{feedModalUser.entry.details?.wakeupTime || '--'}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}><Clock size={14} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }}/>Sleep Time</span>
+                  <span style={{ fontWeight: '800', color: '#6366f1', fontSize: '1.1rem' }}>{feedModalUser.entry.details?.sleepTime || '--'}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}><Flame size={14} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }}/>Mangala Arati</span>
+                  <span style={{ fontWeight: '800', color: attendedMA === 'Yes' ? '#10b981' : '#f43f5e', fontSize: '1.1rem' }}>{attendedMA}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}><CheckCircle size={14} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }}/>Total Chanting</span>
+                  <span style={{ fontWeight: '800', color: '#10b981', fontSize: '1.1rem' }}>{feedModalUser.entry.details?.totalRounds || 0} rounds</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}><Activity size={14} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }}/>Japa Completed</span>
+                  <span style={{ fontWeight: '800', color: '#10b981', fontSize: '1.1rem' }}>{feedModalUser.entry.details?.chantingCompletionTime || '--'}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}><BookOpen size={14} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }}/>Total Reading</span>
+                  <span style={{ fontWeight: '800', color: '#3b82f6', fontSize: '1.1rem' }}>{feedModalUser.entry.details?.readingDuration || 0}m</span>
+                </div>
               </div>
             </div>
-            
-            <h3 style={{ margin: '0 0 5px 0', fontSize: '1.4rem', color: 'var(--text-main)', fontWeight: '800' }}>{feedModalUser.user.name}</h3>
-            <p style={{ margin: '0 0 1.5rem 0', color: 'var(--primary-amber)', fontWeight: '600', fontSize: '0.9rem' }}>Today's Sādhana Complete! 🎉</p>
-            
-            <div style={{ width: '100%', background: 'rgba(0,0,0,0.2)', borderRadius: '16px', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}><CheckCircle size={14} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }}/>Rounds Chanted</span>
-                <span style={{ fontWeight: '800', color: '#10b981', fontSize: '1.1rem' }}>{feedModalUser.entry.details?.totalRounds || 0}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}><BookOpen size={14} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }}/>Book Reading</span>
-                <span style={{ fontWeight: '800', color: '#3b82f6', fontSize: '1.1rem' }}>{feedModalUser.entry.details?.readingDuration || 0}m</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}><Clock size={14} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }}/>Wake Up Time</span>
-                <span style={{ fontWeight: '800', color: '#8b5cf6', fontSize: '1.1rem' }}>{feedModalUser.entry.details?.wakeupTime || '--'}</span>
-              </div>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
+          </div>,
+          document.body
+        );
+      })()}
 
     </div>
   );

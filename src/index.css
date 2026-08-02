@@ -87,6 +87,8 @@ h1, h2, h3, h4, h5, h6 {
 .brand-text h1 { font-size: 1.35rem; font-weight: 700; background: linear-gradient(135deg, #fff 30%, var(--primary-amber)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 .brand-text p { font-size: .75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .08em; }
 
+.mobile-menu-btn { display: none; }
+
 .nav-actions { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
 
 .nav-btn {
@@ -568,12 +570,13 @@ input[type="time"].form-control {
       background: rgba(253, 252, 251, 1) !important;
     }
     
-    .nav-content {
-      flex-direction: column !important;
-      align-items: flex-start !important;
-      overflow-x: hidden !important;
-      gap: 0.8rem !important;
-    }
+        .nav-content {
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        overflow-x: hidden !important;
+        gap: 0.5rem !important;
+      }
     .brand-text {
       display: flex;
       flex-direction: column;
@@ -586,17 +589,37 @@ input[type="time"].form-control {
         padding-bottom: 80px !important; /* Space for bottom nav */
       }
   
-      .nav-actions::-webkit-scrollbar {
-        display: none;
-      }
-      .nav-actions {
-        -ms-overflow-style: none;  /* IE and Edge */
-        scrollbar-width: none;  /* Firefox */
-        overflow-x: auto !important;
-        -webkit-overflow-scrolling: touch;
+      /* MOBILE MENU AND NAVBAR */
+      .mobile-menu-btn {
         display: flex !important;
-        flex-wrap: nowrap !important;
-        width: 100% !important;
+        align-items: center;
+        justify-content: center;
+        padding: 0.5rem;
+      }
+      
+      .nav-actions {
+        display: none !important;
+        position: absolute !important;
+        top: 100% !important;
+        left: 0 !important;
+        right: 0 !important;
+        width: 100vw !important;
+        background: rgba(11, 17, 30, 0.98) !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        padding: 1rem !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.5) !important;
+        gap: 0.8rem !important;
+        z-index: 999;
+      }
+      .nav-actions.mobile-open {
+        display: flex !important;
+      }
+      :root.light-mode .nav-actions {
+        background: rgba(253, 252, 251, 1) !important;
+        border-bottom: 1px solid var(--border-subtle) !important;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1) !important;
       }
 
   /* Settings Modal Vertical Stack */
@@ -647,7 +670,7 @@ input[type="time"].form-control {
   }
   
   /* Shift scrollbar/tabs to bottom */
-  .tabs-bar {
+  .main-bottom-nav {
     position: fixed !important;
     top: auto !important;
     bottom: 0 !important;
@@ -661,13 +684,13 @@ input[type="time"].form-control {
     backdrop-filter: blur(15px);
   }
   
-  .tabs-bar .tabs-container {
+  .main-bottom-nav .tabs-container {
     display: flex !important;
     justify-content: space-around !important;
     gap: 0 !important;
   }
   
-  .tabs-bar .tab-item {
+  .main-bottom-nav .tab-item {
     flex-direction: column !important;
     gap: 0.3rem !important;
     padding: 0.5rem !important;
@@ -678,12 +701,12 @@ input[type="time"].form-control {
     border: none !important;
   }
   
-  .tabs-bar .tab-item.active {
+  .main-bottom-nav .tab-item.active {
     background: transparent !important;
     color: var(--primary-amber) !important;
   }
   
-  .tabs-bar .tab-item svg {
+  .main-bottom-nav .tab-item svg {
     margin: 0 auto;
     width: 20px;
     height: 20px;

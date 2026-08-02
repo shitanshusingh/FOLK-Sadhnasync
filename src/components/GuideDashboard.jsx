@@ -103,9 +103,11 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
     // DEEP ROOT CONNECT: Listen for real-time live sync events from Firebase
     const handleLiveSync = () => refreshData();
     window.addEventListener('sadhana_live_sync', handleLiveSync);
+    window.addEventListener('sadhana_history_synced', handleLiveSync);
 
     return () => {
       window.removeEventListener('sadhana_live_sync', handleLiveSync);
+      window.removeEventListener('sadhana_history_synced', handleLiveSync);
     };
   }, [currentUser]);
 

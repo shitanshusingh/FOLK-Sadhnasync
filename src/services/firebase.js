@@ -188,6 +188,40 @@ export const cloudFetchSadhanaHistory = async (email) => {
   return JSON.parse(localStorage.getItem(`sadhana_history_${email}`) || '[]');
 };
 
+export const cloudFetchAllSadhanaHistories = async () => {
+  if (isCloudActive && db) {
+    try {
+      const querySnapshot = await getDocs(collection(db, 'sadhana_history'));
+      const groupedHistory = {};
+      
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        const email = data.user_email;
+        if (!email) return;
+        
+        if (!groupedHistory[email]) {
+          groupedHistory[email] = [];
+        }
+        delete data.user_email;
+        groupedHistory[email].push(data);
+      });
+      
+      const updatedEmails = Object.keys(groupedHistory);
+      if (updatedEmails.length > 0) {
+        updatedEmails.forEach(email => {
+          localStorage.setItem(`sadhana_history_${email}`, JSON.stringify(groupedHistory[email]));
+        });
+        
+        // Dispatch an event so components like GuideDashboard know data has been refreshed
+        window.dispatchEvent(new Event('sadhana_history_synced'));
+        return groupedHistory;
+      }
+    } catch (e) {
+      console.error("Cloud All Histories Sync Error:", e);
+    }
+  }
+};
+
 // 3. Central Campaign Sync
 export const cloudSaveCampaign = async (campaignObj) => {
   if (!campaignObj || !campaignObj.id) return;
