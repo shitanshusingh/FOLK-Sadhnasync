@@ -271,10 +271,16 @@ const Dashboard = ({ currentUser, setActiveTab, setPrefilledDate }) => {
   // Top 5 Mini Leaderboard
   const top5Leaderboard = useMemo(() => {
     const allUsers = [];
-    allUsers.push(currentUser);
-    const bucketKey = `sadhana_leaderboard_seeded_${currentUser.status}_${currentUser.guide}_${currentUser.residency}`;
-    const dummies = JSON.parse(localStorage.getItem(bucketKey) || '[]');
-    allUsers.push(...dummies);
+    const allRegisteredUsers = JSON.parse(localStorage.getItem('sadhana_users') || '[]');
+    const matchedUsers = allRegisteredUsers.filter(u => 
+      u.status === currentUser.status && 
+      u.guide === currentUser.guide && 
+      u.residency === currentUser.residency
+    );
+    if (!matchedUsers.find(u => u.email === currentUser.email)) {
+       matchedUsers.push(currentUser);
+    }
+    allUsers.push(...matchedUsers);
 
     const start = startOfMonth(dashboardDate);
     const end = endOfMonth(dashboardDate);

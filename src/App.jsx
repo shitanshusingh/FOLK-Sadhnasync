@@ -337,28 +337,6 @@ function App() {
               <CheckSquare size={16} /> Bucket List
             </button>
 
-            {/* ☁️ Tiny Cloud Sync Status Indicator */}
-            <div title={isCloudActive ? 'Cloud Connected — plk-sadhnasync' : 'Offline Mode'} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', width: '32px', height: '32px', cursor: 'default' }}>
-              <Cloud size={16} style={{ color: isCloudActive ? '#10b981' : '#f43f5e', opacity: 0.9 }} />
-              <span style={{
-                position: 'absolute',
-                bottom: '3px',
-                right: '3px',
-                width: '6px',
-                height: '6px',
-                borderRadius: '50%',
-                background: isCloudActive ? '#10b981' : '#f43f5e',
-                border: '1.5px solid var(--bg-main)',
-                animation: isCloudActive ? 'cloud-pulse 1.8s ease-in-out infinite' : 'none'
-              }} />
-            </div>
-            <style>{`
-              @keyframes cloud-pulse {
-                0%, 100% { opacity: 1; transform: scale(1); }
-                50% { opacity: 0.3; transform: scale(0.6); }
-              }
-            `}</style>
-
             {/* Notifications Button */}
             <div style={{ position: 'relative' }}>
               <button className="nav-btn btn-secondary" style={{ position: 'relative' }} onClick={() => setShowNotifications(!showNotifications)}>
@@ -410,18 +388,42 @@ function App() {
             <button className="nav-btn btn-secondary" onClick={() => setShowSettings(true)}>
               <Settings size={18} />
             </button>
-            <button className="nav-btn btn-rose" style={{ padding: '0.6rem', position: 'relative' }} onClick={() => setShowLogoutConfirm(true)}>
+
+            {/* ☁️ Tiny Cloud Sync Status Indicator */}
+            <div title={isCloudActive ? 'Cloud Connected ⚡ plk-sadhnasync' : 'Offline Mode'} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', width: '32px', height: '32px', cursor: 'default' }}>
+              <Cloud size={16} style={{ color: isCloudActive ? '#10b981' : '#f43f5e', opacity: 0.9 }} />
+              <span style={{
+                position: 'absolute',
+                bottom: '3px',
+                right: '3px',
+                width: '6px',
+                height: '6px',
+                borderRadius: '50%',
+                background: isCloudActive ? '#10b981' : '#f43f5e',
+                border: '1.5px solid var(--bg-main)',
+                animation: isCloudActive ? 'cloud-pulse 1.8s ease-in-out infinite' : 'none'
+              }} />
+            </div>
+            <style>{`
+              @keyframes cloud-pulse {
+                0%, 100% { opacity: 1; transform: scale(1); }
+                50% { opacity: 0.3; transform: scale(0.6); }
+              }
+            `}</style>
+
+            <button className="nav-btn btn-rose" style={{ padding: '0.6rem' }} onClick={() => setShowLogoutConfirm(true)}>
               <LogOut size={18} />
-              {showLogoutConfirm && (
-                <div onClick={e => e.stopPropagation()} className="animate-fade-in" style={{ position: 'absolute', top: '120%', right: 0, width: '250px', background: 'var(--bg-card)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '12px', padding: '1rem', boxShadow: '0 10px 25px rgba(0,0,0,0.5)', zIndex: 100, textAlign: 'center' }}>
-                  <p style={{ color: '#f8fafc', margin: '0 0 1rem 0', fontSize: '0.9rem', whiteSpace: 'normal' }}>Are you sure you want to log out?</p>
-                  <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
-                    <button onClick={(e) => { e.stopPropagation(); setShowLogoutConfirm(false); }} className="nav-btn btn-secondary" style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }}>Cancel</button>
-                    <button onClick={(e) => { e.stopPropagation(); handleLogout(); }} className="nav-btn btn-rose" style={{ padding: '0.4rem 1rem', fontSize: '0.85rem', fontWeight: 'bold' }}>Yes</button>
-                  </div>
-                </div>
-              )}
             </button>
+            {/* Logout Confirm Dialog (Fixed position for mobile) */}
+            {showLogoutConfirm && (
+              <div onClick={e => e.stopPropagation()} className="animate-fade-in" style={{ position: 'fixed', top: '70px', right: '15px', width: '220px', background: '#0f172a', border: '1px solid rgba(244, 63, 94, 0.25)', borderRadius: '14px', padding: '1rem', boxShadow: '0 15px 35px rgba(0,0,0,0.6)', zIndex: 9999, textAlign: 'center' }}>
+                <p style={{ color: '#f8fafc', margin: '0 0 1rem 0', fontSize: '0.9rem', fontWeight: 'bold', whiteSpace: 'normal', lineHeight: '1.4' }}>Are you sure you want to log out?</p>
+                <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                  <button onClick={(e) => { e.stopPropagation(); setShowLogoutConfirm(false); }} className="nav-btn" style={{ padding: '0.45rem 1rem', fontSize: '0.85rem', background: '#1e293b', border: '1px solid #334155', color: '#e2e8f0', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}>Cancel</button>
+                  <button onClick={(e) => { e.stopPropagation(); handleLogout(); }} className="nav-btn" style={{ padding: '0.45rem 1rem', fontSize: '0.85rem', background: '#f43f5e', border: 'none', color: '#ffffff', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>Yes</button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </header>

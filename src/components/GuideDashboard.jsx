@@ -92,6 +92,11 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
   const [newResidencyName, setNewResidencyName] = useState('');
   const [statusMsg, setStatusMsg] = useState('');
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  
+  // Notifications
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [clearedNotifs, setClearedNotifs] = useState(() => JSON.parse(localStorage.getItem(`sadhana_cleared_notifs_${currentUser.email}`) || '[]'));
 
   useEffect(() => {
     refreshData();
@@ -108,6 +113,19 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
 
     let camps = JSON.parse(localStorage.getItem(`guide_campaigns_${currentUser.email}`) || '[]');
     setCampaigns(camps);
+
+    // Fetch Notifications for this Guide
+    const allNotifs = JSON.parse(localStorage.getItem('sadhana_notifications') || '[]');
+    const myNotifs = allNotifs.filter(n => n.target === currentUser.name || n.target === currentUser.email);
+    setNotifications(myNotifs);
+  };
+
+  const handleClearNotifications = () => {
+    if (notifications.length > 0) {
+      const newCleared = [...clearedNotifs, ...notifications.map(n => n.id)];
+      setClearedNotifs(newCleared);
+      localStorage.setItem(`sadhana_cleared_notifs_${currentUser.email}`, JSON.stringify(newCleared));
+    }
   };
 
   const showStatus = (msg) => { setStatusMsg(msg); setTimeout(() => setStatusMsg(''), 3000); };
@@ -371,6 +389,46 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
                 </div>
               </div>
             )}
+
+            {/* Notification Bell */}
+            <div style={{ position: 'relative' }}>
+              <button onClick={() => setShowNotifications(!showNotifications)} style={{ padding: '0.55rem', borderRadius: '50%', border: '1px solid var(--border-subtle)', background: 'var(--bg-input)', color: '#f8fafc', cursor: 'pointer', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Bell size={20} />
+                {notifications.filter(n => !clearedNotifs.includes(n.id)).length > 0 && (
+                  <span style={{ position: 'absolute', top: '-2px', right: '-2px', background: '#ef4444', color: '#fff', fontSize: '0.65rem', fontWeight: 'bold', width: '16px', height: '16px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {notifications.filter(n => !clearedNotifs.includes(n.id)).length}
+                  </span>
+                )}
+              </button>
+
+              {showNotifications && (
+                <div onClick={e => e.stopPropagation()} className="animate-fade-in" style={{ position: 'absolute', top: '120%', right: 0, width: '320px', background: 'var(--bg-card)', border: '1px solid var(--border-highlight)', borderRadius: '16px', padding: '1.2rem', boxShadow: '0 15px 35px rgba(0,0,0,0.5)', zIndex: 300, display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: '400px', overflowY: 'auto' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h3 style={{ margin: 0, fontSize: '1rem', color: 'var(--primary-amber)' }}>Notifications</h3>
+                    <button onClick={() => setShowNotifications(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={16} /></button>
+                  </div>
+                  
+                  {notifications.filter(n => !clearedNotifs.includes(n.id)).length === 0 ? (
+                    <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem 0', fontSize: '0.9rem' }}>
+                      <Bell size={32} style={{ opacity: 0.2, margin: '0 auto 0.5rem auto' }} />
+                      No new notifications
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                      {notifications.filter(n => !clearedNotifs.includes(n.id)).map(n => (
+                        <div key={n.id} style={{ padding: '0.8rem', background: 'var(--bg-input)', borderRadius: '8px', borderLeft: '3px solid var(--accent-blue)', fontSize: '0.85rem' }}>
+                          <strong style={{ display: 'block', color: 'var(--text-main)', marginBottom: '0.2rem' }}>{n.title || n.sender}</strong>
+                          <span style={{ color: 'var(--text-muted)', lineHeight: '1.4' }}>{n.message}</span>
+                        </div>
+                      ))}
+                      <button onClick={handleClearNotifications} className="nav-btn btn-secondary" style={{ width: '100%', marginTop: '0.5rem', padding: '0.5rem', fontSize: '0.85rem' }}>
+                        <CheckCircle size={14} /> Mark All as Read
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>
