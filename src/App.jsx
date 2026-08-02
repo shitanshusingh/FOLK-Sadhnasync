@@ -480,8 +480,8 @@ function App() {
       {showNotifications && (
         <>
           <div onClick={() => setShowNotifications(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9998 }} />
-          <div className="animate-fade-in" style={{ position: 'fixed', top: '75px', left: '50%', transform: 'translateX(-50%)', width: '90vw', maxWidth: '350px', background: 'var(--bg-card)', border: '1px solid var(--border-highlight)', borderRadius: '12px', padding: '1rem', boxShadow: '0 15px 35px rgba(0,0,0,0.7)', zIndex: 9999 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.5rem' }}>
+          <div onClick={e => e.stopPropagation()} className="animate-fade-in" style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '90vw', maxWidth: '350px', background: 'var(--bg-card)', border: '1px solid var(--border-highlight)', borderRadius: '16px', padding: '1.2rem', boxShadow: '0 15px 35px rgba(0,0,0,0.7)', zIndex: 9999, display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: '80vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.5rem' }}>
               <h4 style={{ margin: 0, color: 'var(--text-main)' }}>Notifications</h4>
               <div style={{ display: 'flex', gap: '10px' }}>
                 {notifications.length > 0 && (
