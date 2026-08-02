@@ -15,12 +15,13 @@ import GuideDashboard from './components/GuideDashboard';
 import { subDays, format } from 'date-fns';
 import { calculatePoints } from './utils/scoring';
 import {
-  cloudFetchAllUsers, cloudSaveUser, cloudFetchCampaigns, subscribeToCloudUpdates
+  cloudFetchAllUsers, cloudSaveUser, cloudFetchCampaigns, subscribeToCloudUpdates, cloudFetchNotifications
 } from './services/firebase';
 import { isCloudActive } from './services/firebase';
 
 function App() {
   const [currentUser, setCurrentUser] = useState(() => JSON.parse(localStorage.getItem('sadhana_current_user') || 'null'));
+  const [impersonatingUser, setImpersonatingUser] = useState(null);
   const [currentTab, setCurrentTab] = useState('dashboard');
   const [prefilledDate, setPrefilledDate] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
@@ -47,20 +48,10 @@ function App() {
     }
   }, []);
 
-  // ☁️ Cloud Startup Sync — Pull all users from Firebase on app load
+  // ☁️ Cloud Startup Sync — Pull all users and notifications from Firebase on app load
   useEffect(() => {
-    cloudFetchAllUsers().then(cloudUsers => {
-      if (cloudUsers.length > 0) {
-        // Merge cloud users into local cache (cloud wins for existing records)
-        const local = JSON.parse(localStorage.getItem('sadhana_users') || '[]');
-        const merged = [...local];
-        cloudUsers.forEach(cu => {
-          if (!merged.find(u => u.email === cu.email)) merged.push(cu);
-        });
-        localStorage.setItem('sadhana_users', JSON.stringify(merged));
-        window.dispatchEvent(new Event('storage'));
-      }
-    }).catch(() => {}); // Graceful fallback to localStorage
+    cloudFetchAllUsers().catch(console.error);
+    cloudFetchNotifications().catch(console.error);
   }, []);
 
   // Seed Dummy Data for new users and inject a dummy account
@@ -349,6 +340,14 @@ function App() {
       });
     });
 
+    // Cloud Personal Notifications
+    const cloudNotifs = JSON.parse(localStorage.getItem('sadhana_notifications') || '[]');
+    cloudNotifs.forEach(n => {
+      if (n.target === currentUser.email) {
+        notifs.push(n);
+      }
+    });
+
     // Filter out cleared notifications
     return notifs.filter(n => !clearedNotifs.includes(n.id));
   };
@@ -358,22 +357,51 @@ function App() {
   const renderContent = () => {
     switch (currentTab) {
       case 'dashboard':
-        return <Dashboard currentUser={currentUser} setActiveTab={setCurrentTab} setPrefilledDate={setPrefilledDate} />;
+        return <Dashboard currentUser={activeUser} setActiveTab={setCurrentTab} setPrefilledDate={setPrefilledDate} />;
       case 'tracker':
-        return <SadhanaTracker currentUser={currentUser} prefilledDate={prefilledDate} />;
+        return <SadhanaTracker currentUser={activeUser} prefilledDate={prefilledDate} />;
       case 'goals':
-        return <BucketList currentUser={currentUser} />;
+        return <BucketList currentUser={activeUser} />;
       case 'timer':
-        return <FocusTimer currentUser={currentUser} />;
+        return <FocusTimer currentUser={activeUser} />;
       case 'leaderboard':
-        return <Leaderboard currentUser={currentUser} />;
+        return <Leaderboard currentUser={activeUser} />;
+      case 'admin_dashboard':
+        return <AdminDashboard currentUser={currentUser} onImpersonate={handleImpersonate} />;
+      case 'guide_dashboard':
+        return <GuideDashboard currentUser={activeUser} onImpersonate={handleImpersonate} />;
       default:
         return null;
     }
   };
 
+  const handleImpersonate = (user) => {
+    setImpersonatingUser(user);
+    setCurrentTab(user.role === 'guide' ? 'guide_dashboard' : 'dashboard');
+  };
+
+  const activeUser = impersonatingUser || currentUser;
+
   return (
     <div className="app-container">
+      {/* 🔴 GOD MODE BANNER */}
+      {impersonatingUser && (
+        <div style={{
+          background: '#ef4444', color: 'white', padding: '0.6rem 1rem', display: 'flex', justifyContent: 'space-between',
+          alignItems: 'center', fontWeight: 'bold', zIndex: 9999, position: 'sticky', top: 0, boxShadow: '0 4px 15px rgba(239, 68, 68, 0.4)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Eye size={20} />
+            LIVE MONITOR: You are viewing & editing as {impersonatingUser.name} ({impersonatingUser.role})
+          </div>
+          <button onClick={() => { setImpersonatingUser(null); setCurrentTab('dashboard'); }} style={{
+            background: 'rgba(255,255,255,0.2)', border: 'none', color: 'white', padding: '0.3rem 0.8rem', borderRadius: '20px', cursor: 'pointer', fontWeight: 'bold'
+          }}>
+            Exit Live View
+          </button>
+        </div>
+      )}
+
       {/* Background glow effects */}
       <div className="glow-sphere" style={{ top: '-10%', left: '-10%' }}></div>
       <div className="glow-sphere" style={{ bottom: '-20%', right: '-10%', background: 'var(--accent-blue)', opacity: 0.08 }}></div>
@@ -384,7 +412,7 @@ function App() {
             <img src={folkLogo} alt="FOLK Logo" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', boxShadow: '0 0 15px rgba(245,158,11,0.4)' }} />
             <div className="brand-text">
               <h1>FOLK SadhnaSync</h1>
-              <p>ISKCON BHADAJ, AHMEDABAD • <span style={{color: 'var(--accent-blue)'}}>● {currentUser.name}</span></p>
+              <p>ISKCON BHADAJ, AHMEDABAD • <span style={{color: impersonatingUser ? '#ef4444' : 'var(--accent-blue)'}}>● {activeUser.name} {impersonatingUser ? '(Live View)' : ''}</span></p>
             </div>
           </div>
 
@@ -458,9 +486,9 @@ function App() {
             </div>
 
             {/* User Profile Button */}
-            <button className="nav-btn btn-secondary" style={{ padding: '0.4rem', borderRadius: '50%', overflow: 'hidden' }} onClick={() => setShowProfile(true)}>
-              {currentUser.photo ? (
-                <img src={currentUser.photo} alt="Profile" style={{ width: '28px', height: '28px', objectFit: 'cover', borderRadius: '50%' }} />
+            <button className="nav-btn btn-secondary" style={{ padding: '0.4rem', borderRadius: '50%', overflow: 'hidden', border: impersonatingUser ? '2px solid #ef4444' : 'none' }} onClick={() => setShowProfile(true)}>
+              {activeUser.photo ? (
+                <img src={activeUser.photo} alt="Profile" style={{ width: '28px', height: '28px', objectFit: 'cover', borderRadius: '50%' }} />
               ) : (
                 <UserIcon size={18} />
               )}

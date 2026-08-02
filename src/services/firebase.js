@@ -28,6 +28,36 @@ try {
   console.warn("⚠️ Running in hybrid cloud mode:", err.message);
 }
 
+// 7. Global Notifications & Broadcasts Sync
+export const cloudSaveNotification = async (notification) => {
+  if (isCloudActive && db) {
+    try {
+      await setDoc(doc(db, 'notifications', notification.id), notification);
+    } catch (e) {
+      console.error("Cloud Notification Save Error:", e);
+    }
+  }
+};
+
+export const cloudFetchNotifications = async () => {
+  if (isCloudActive && db) {
+    try {
+      const querySnapshot = await getDocs(collection(db, 'notifications'));
+      const cloudNotifs = [];
+      querySnapshot.forEach((doc) => {
+        cloudNotifs.push(doc.data());
+      });
+      if (cloudNotifs.length > 0) {
+        localStorage.setItem('sadhana_notifications', JSON.stringify(cloudNotifs));
+        return cloudNotifs;
+      }
+    } catch (e) {
+      console.warn("Using cached notifications:", e);
+    }
+  }
+  return JSON.parse(localStorage.getItem('sadhana_notifications') || '[]');
+};
+
 export { db, isCloudActive };
 
 // --- 🌐 CLOUD DATA SYNC API FUNCTIONS ---
@@ -62,8 +92,16 @@ export const cloudFetchAllUsers = async () => {
         cloudUsers.push(doc.data());
       });
       if (cloudUsers.length > 0) {
-        localStorage.setItem('sadhana_users', JSON.stringify(cloudUsers));
-        return cloudUsers;
+        // Merge: Cloud wins for existing, but preserve local-only accounts (like Admin or offline registrations)
+        const localUsers = JSON.parse(localStorage.getItem('sadhana_users') || '[]');
+        const merged = [...cloudUsers];
+        localUsers.forEach(lu => {
+          if (!merged.find(u => u.email === lu.email)) {
+            merged.push(lu);
+          }
+        });
+        localStorage.setItem('sadhana_users', JSON.stringify(merged));
+        return merged;
       }
     } catch (e) {
       console.warn("Using cached users due to cloud fetch:", e);

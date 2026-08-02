@@ -10,6 +10,7 @@ import { calculatePoints } from '../utils/scoring';
 import { generateSadhanaPDFReport } from '../utils/pdfGenerator';
 import folkLogo from '../assets/folk_logo.png';
 import iskconLogo from '../assets/iskcon_logo.png';
+import { cloudSaveUser } from '../services/firebase';
 
 const TABS = [
   { id: 'all_guides', label: '👥 All Guides Oversight', icon: Compass },
@@ -23,8 +24,8 @@ const TABS = [
   { id: 'data', label: 'System Data Control', icon: Database },
 ];
 
-const AdminDashboard = ({ currentUser, onLogout, onLoginAsUser }) => {
-  const [users, setUsers] = useState([]);
+const AdminDashboard = ({ currentUser, onLogout, onImpersonate }) => {
+  const [users, setUsers] = useState(() => JSON.parse(localStorage.getItem('sadhana_users') || '[]'));
   const [activeTab, setActiveTab] = useState('users');
   const [search, setSearch] = useState('');
   const [selectedUser, setSelectedUser] = useState(null);
@@ -111,9 +112,11 @@ const AdminDashboard = ({ currentUser, onLogout, onLoginAsUser }) => {
       ? { ...u, name: editName, guide: editGuide, residency: editResidency, role: editRole, ...(editPassword ? { password: editPassword } : {}) }
       : u
     );
+    const updatedUser = updated.find(u => u.email === selectedUser.email);
     saveUsers(updated);
+    cloudSaveUser(updatedUser);
+    showStatus('User updated successfully!');
     setShowUserModal(false);
-    showStatus('User updated successfully.');
     logActivity(`Admin edited user: ${selectedUser.email}`);
   };
 
@@ -156,6 +159,7 @@ const AdminDashboard = ({ currentUser, onLogout, onLoginAsUser }) => {
       photo: `https://api.dicebear.com/7.x/avataaars/svg?seed=${guideName.replace(/\s+/g, '')}`
     };
     saveUsers([...users, newGuide]);
+    cloudSaveUser(newGuide);
     
     // Store generated credentials for modal display
     setCreatedGuideCredentials({
@@ -268,8 +272,8 @@ const AdminDashboard = ({ currentUser, onLogout, onLoginAsUser }) => {
       </header>
 
       {/* KPI Cards */}
-      <div style={{ maxWidth: '1400px', margin: '1.5rem auto', padding: '0 2rem' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
+      <div className="admin-kpi-wrapper" style={{ maxWidth: '1400px', margin: '1.5rem auto', padding: '0 2rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
           {[
             { label: 'Total Users', value: users.length, icon: '👥', color: '#3b82f6' },
             { label: 'Devotees', value: totalDevotees, icon: '🙏', color: '#10b981' },
@@ -289,7 +293,7 @@ const AdminDashboard = ({ currentUser, onLogout, onLoginAsUser }) => {
         </div>
 
         {/* Tabs */}
-        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', overflowX: 'auto', paddingBottom: '4px' }}>
+        <div className="admin-tabs-nav" style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', overflowX: 'auto', paddingBottom: '4px' }}>
           {TABS.map(({ id, label, icon: Icon }) => (
             <button key={id} onClick={() => setActiveTab(id)} style={{
               padding: '0.7rem 1.2rem', border: 'none', borderRadius: '10px',
@@ -375,7 +379,7 @@ const AdminDashboard = ({ currentUser, onLogout, onLoginAsUser }) => {
                       {/* Enrolled Boys Avatar Pill */}
                       <div>
                         <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.4rem', fontWeight: '600' }}>Assigned Devotees:</div>
-                        <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap', marginBottom: '0.8rem' }}>
+                        <div style={{ display: 'flex', gap: '0.8rem', maxWidth: '1400px', margin: '0 auto 1.5rem auto', flexWrap: 'nowrap' }} className="admin-tabs-nav">
                           {guideBoys.map(b => (
                             <span key={b.email} className="badge badge-amber" style={{ fontSize: '0.72rem', padding: '3px 8px' }}>
                               {b.name} ({b.status})
@@ -624,7 +628,10 @@ const AdminDashboard = ({ currentUser, onLogout, onLoginAsUser }) => {
                       <td>
                         <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
                           <button onClick={() => openUserModal(user)} style={{ padding: '5px 10px', borderRadius: '6px', border: '1px solid rgba(59,130,246,0.3)', background: 'rgba(59,130,246,0.1)', color: '#3b82f6', cursor: 'pointer', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '3px', fontFamily: 'inherit' }}>
-                            <Eye size={12} /> View
+                            <Eye size={12} /> Edit Info
+                          </button>
+                          <button onClick={() => onImpersonate(user)} style={{ padding: '5px 10px', borderRadius: '6px', border: '1px solid rgba(16,185,129,0.3)', background: 'rgba(16,185,129,0.1)', color: '#10b981', cursor: 'pointer', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '3px', fontFamily: 'inherit' }}>
+                            <Activity size={12} /> Live Monitor
                           </button>
                           <button onClick={() => handleResetPassword(user.email)} style={{ padding: '5px 10px', borderRadius: '6px', border: '1px solid rgba(245,158,11,0.3)', background: 'rgba(245,158,11,0.1)', color: '#f59e0b', cursor: 'pointer', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '3px', fontFamily: 'inherit' }}>
                             <Key size={12} /> Reset Pass
@@ -793,7 +800,7 @@ const AdminDashboard = ({ currentUser, onLogout, onLoginAsUser }) => {
             </div>
 
             {/* Edit Fields */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
               {[
                 { label: 'Full Name', value: editName, set: setEditName },
                 { label: 'Role', value: editRole, set: setEditRole, isSelect: true, options: ['devotee', 'guide', 'admin'] },

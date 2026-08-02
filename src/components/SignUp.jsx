@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Camera, Eye, EyeOff } from 'lucide-react';
-import { cloudSaveUser, cloudFetchAllUsers } from '../services/firebase';
+import { cloudSaveUser, cloudFetchAllUsers, cloudSaveNotification } from '../services/firebase';
 
 const SignUp = ({ onAuthSuccess }) => {
   const [photoPreview, setPhotoPreview] = useState(null);
@@ -91,6 +91,19 @@ const SignUp = ({ onAuthSuccess }) => {
 
     // ☁️ Sync new user to Firebase cloud — so they can login from any device
     cloudSaveUser(data);
+    
+    // 🔔 Send direct notification to their Guide
+    if (data.guide) {
+      cloudSaveNotification({
+        id: `signup_${data.userId}_${Date.now()}`,
+        title: `👤 New Devotee: ${data.name}`,
+        message: `${data.name} has registered under your guidance as a ${data.status}.`,
+        type: 'info',
+        target: data.guide,
+        date: new Date().toISOString(),
+        sender: 'System'
+      });
+    }
     
     alert(`Registration Successful!\nYour generated User ID is: ${data.userId}\nYou can login using this ID or your email.`);
     onAuthSuccess(data);

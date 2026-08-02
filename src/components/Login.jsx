@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Eye, EyeOff, LogIn, KeyRound, ArrowLeft } from 'lucide-react';
-import { cloudFetchAllUsers } from '../services/firebase';
+import { cloudFetchAllUsers, cloudSaveUser } from '../services/firebase';
 
 const Login = ({ onAuthSuccess }) => {
   const [showPassword, setShowPassword] = useState(false);
@@ -29,6 +29,8 @@ const Login = ({ onAuthSuccess }) => {
       );
 
       if (user) {
+        // ☁️ Ensure user (like the local Admin) is pushed to the cloud if they log in successfully
+        cloudSaveUser(user);
         localStorage.setItem('sadhana_remembered_email', user.email);
         onAuthSuccess(user);
       } else {
@@ -42,6 +44,7 @@ const Login = ({ onAuthSuccess }) => {
         && u.password === password
       );
       if (user) {
+        cloudSaveUser(user);
         localStorage.setItem('sadhana_remembered_email', user.email);
         onAuthSuccess(user);
       } else {
