@@ -402,7 +402,7 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
               </button>
 
               {showNotifications && (
-                <div onClick={e => e.stopPropagation()} className="animate-fade-in" style={{ position: 'absolute', top: '120%', right: 0, width: '320px', background: 'var(--bg-card)', border: '1px solid var(--border-highlight)', borderRadius: '16px', padding: '1.2rem', boxShadow: '0 15px 35px rgba(0,0,0,0.5)', zIndex: 300, display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: '400px', overflowY: 'auto' }}>
+                <div onClick={e => e.stopPropagation()} className="animate-fade-in" style={{ position: 'fixed', top: '70px', left: '50%', transform: 'translateX(-50%)', width: '90vw', maxWidth: '350px', background: 'var(--bg-card)', border: '1px solid var(--border-highlight)', borderRadius: '16px', padding: '1.2rem', boxShadow: '0 15px 35px rgba(0,0,0,0.7)', zIndex: 9999, display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: '80vh', overflowY: 'auto' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <h3 style={{ margin: 0, fontSize: '1rem', color: 'var(--primary-amber)' }}>Notifications</h3>
                     <button onClick={() => setShowNotifications(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={16} /></button>
