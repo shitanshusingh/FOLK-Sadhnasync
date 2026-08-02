@@ -566,8 +566,8 @@ input[type="time"].form-control {
     gap: 0.8rem !important;
   }
   .nav-actions {
-    flex-wrap: nowrap !important;
-    overflow-x: auto !important;
+    flex-wrap: wrap !important;
+    overflow-x: visible !important;
     width: 100% !important;
     padding-bottom: 5px !important;
     justify-content: flex-start !important;

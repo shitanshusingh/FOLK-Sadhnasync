@@ -349,7 +349,7 @@ function App() {
               </button>
               
               {showNotifications && (
-                <div className="animate-fade-in" style={{ position: 'absolute', top: '120%', right: 0, width: '320px', background: 'var(--bg-card)', border: '1px solid var(--border-highlight)', borderRadius: '12px', padding: '1rem', boxShadow: '0 10px 25px rgba(0,0,0,0.5)', zIndex: 100 }}>
+                <div className="animate-fade-in" style={{ position: 'fixed', top: '70px', left: '50%', transform: 'translateX(-50%)', width: '90vw', maxWidth: '350px', background: 'var(--bg-card)', border: '1px solid var(--border-highlight)', borderRadius: '12px', padding: '1rem', boxShadow: '0 15px 35px rgba(0,0,0,0.7)', zIndex: 9999 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.5rem' }}>
                     <h4 style={{ margin: 0, color: 'var(--text-main)' }}>Notifications</h4>
                     <div style={{ display: 'flex', gap: '10px' }}>

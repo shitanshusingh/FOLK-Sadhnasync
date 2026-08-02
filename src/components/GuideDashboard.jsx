@@ -641,28 +641,30 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
                     <div style={{ width: '36px', height: '36px', borderRadius: '50%', overflow: 'hidden', flexShrink: 0 }}>
                       <img src={d.photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${d.name}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: '700', color: 'var(--text-main)', fontSize: '0.92rem' }}>{d.name}</div>
+                    <div style={{ flex: 1, minWidth: '120px' }}>
+                      <div style={{ fontWeight: '700', color: 'var(--text-main)', fontSize: '0.92rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.name}</div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                         <span className={`badge ${d.status === 'FOLK Resident' ? 'badge-emerald' : (d.status === 'Non-FOLK Resident' ? 'badge-blue' : 'badge-amber')}`} style={{ fontSize: '0.7rem', padding: '1px 6px' }}>
                           {d.status}
                         </span>
-                        {d.residency && ` · ${d.residency}`}
+                        {d.residency && ` • ${d.residency}`}
                       </div>
                     </div>
-                    <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
-                      <div style={{ textAlign: 'center' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                      <div style={{ textAlign: 'center', minWidth: '40px' }}>
                         <div style={{ fontSize: '1.1rem', fontWeight: '800', color: SCORE_COLOR(d.avg) }}>{d.avg}/20</div>
                         <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>Avg Score</div>
                       </div>
-                      <div style={{ textAlign: 'center' }}>
+                      <div style={{ textAlign: 'center', minWidth: '40px' }}>
                         <div style={{ fontSize: '1rem', fontWeight: '700', color: '#3b82f6' }}>{d.streak}d</div>
                         <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>Streak</div>
                       </div>
                       <div style={{ textAlign: 'center' }}>
-                        <button onClick={(e) => { e.stopPropagation(); downloadDevoteePDF(d); }} style={{ padding: '4px 10px', borderRadius: '6px', border: 'none', background: 'rgba(16,185,129,0.15)', color: '#10b981', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold', fontFamily: 'inherit' }}>
+                        <button onClick={(e) => { e.stopPropagation(); downloadDevoteePDF(d); }} style={{ padding: '4px 8px', borderRadius: '6px', border: 'none', background: 'rgba(16,185,129,0.15)', color: '#10b981', cursor: 'pointer', fontSize: '0.7rem', fontWeight: 'bold', fontFamily: 'inherit' }}>
                           PDF
                         </button>
+                      </div>
+                    </div>                </button>
                       </div>
                     </div>
                   </div>
