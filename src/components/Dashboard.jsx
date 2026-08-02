@@ -274,8 +274,7 @@ const Dashboard = ({ currentUser, setActiveTab, setPrefilledDate }) => {
     const allRegisteredUsers = JSON.parse(localStorage.getItem('sadhana_users') || '[]');
     const matchedUsers = allRegisteredUsers.filter(u => 
       u.status === currentUser.status && 
-      u.guide === currentUser.guide && 
-      u.residency === currentUser.residency
+      u.guide === currentUser.guide
     );
     if (!matchedUsers.find(u => u.email === currentUser.email)) {
        matchedUsers.push(currentUser);

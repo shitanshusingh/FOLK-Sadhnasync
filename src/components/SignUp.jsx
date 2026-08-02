@@ -104,6 +104,9 @@ const SignUp = ({ onAuthSuccess }) => {
         sender: 'System'
       });
     }
+
+    // Store remembered email so refresh doesn't log them out
+    localStorage.setItem('sadhana_remembered_email', data.email);
     
     alert(`Registration Successful!\nYour generated User ID is: ${data.userId}\nYou can login using this ID or your email.`);
     onAuthSuccess(data);

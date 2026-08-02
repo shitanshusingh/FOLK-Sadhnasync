@@ -96,7 +96,7 @@ export { db, isCloudActive };
 export const cloudSaveUser = async (userObj) => {
   if (!userObj || !userObj.email) return;
   // Always update local cache
-  const localUsers = JSON.parse(localStorage.getItem('sadhana_users') || '[]');
+  const localUsers = JSON.parse(localStorage.getItem('sadhana_users') || '[]').filter(Boolean);
   const idx = localUsers.findIndex(u => u.email === userObj.email);
   if (idx >= 0) localUsers[idx] = userObj;
   else localUsers.push(userObj);
@@ -123,7 +123,7 @@ export const cloudFetchAllUsers = async () => {
       });
       if (cloudUsers.length > 0) {
         // Merge: Cloud wins for existing, but preserve local-only accounts (like Admin or offline registrations)
-        const localUsers = JSON.parse(localStorage.getItem('sadhana_users') || '[]');
+        const localUsers = JSON.parse(localStorage.getItem('sadhana_users') || '[]').filter(Boolean);
         const merged = [...cloudUsers];
         localUsers.forEach(lu => {
           if (!merged.find(u => u.email === lu.email)) {
@@ -137,7 +137,8 @@ export const cloudFetchAllUsers = async () => {
       console.warn("Using cached users due to cloud fetch:", e);
     }
   }
-  return JSON.parse(localStorage.getItem('sadhana_users') || '[]');
+  const localUsers = JSON.parse(localStorage.getItem('sadhana_users') || '[]').filter(Boolean);
+  return localUsers;
 };
 
 // 2. Central Sādhana History Log Sync

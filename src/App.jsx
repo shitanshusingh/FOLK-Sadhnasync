@@ -48,7 +48,7 @@ function App() {
     }
   }, []);
 
-  // ☁️ Cloud Startup Sync — Pull all data from Firebase on app load
+  // ☁️ Cloud Startup Sync & Deep Root Real-Time Listeners
   useEffect(() => {
     cloudFetchAllUsers().catch(console.error);
     cloudFetchNotifications().catch(console.error);
@@ -59,6 +59,31 @@ function App() {
         cloudSaveResidency(res).catch(console.error);
       });
     }).catch(console.error);
+
+    // DEEP ROOT CONNECT: Real-time Live Sync
+    const unsubUsers = subscribeToCloudUpdates('users', (cloudUsers) => {
+      if (cloudUsers && cloudUsers.length > 0) {
+        const localUsers = JSON.parse(localStorage.getItem('sadhana_users') || '[]').filter(Boolean);
+        const merged = [...cloudUsers];
+        localUsers.forEach(lu => {
+          if (!merged.find(u => u.email === lu.email)) merged.push(lu);
+        });
+        localStorage.setItem('sadhana_users', JSON.stringify(merged));
+        window.dispatchEvent(new Event('sadhana_live_sync'));
+      }
+    });
+
+    const unsubNotifs = subscribeToCloudUpdates('notifications', (cloudNotifs) => {
+      if (cloudNotifs && cloudNotifs.length > 0) {
+        localStorage.setItem('sadhana_notifications', JSON.stringify(cloudNotifs));
+        window.dispatchEvent(new Event('sadhana_live_sync'));
+      }
+    });
+
+    return () => {
+      unsubUsers();
+      unsubNotifs();
+    };
   }, []);
 
   // Ensure Super Admin exists (only locally if cloud is not active yet)
@@ -134,9 +159,15 @@ function App() {
         
         // 2 hours = 2 * 60 * 60 * 1000 = 7200000 ms
         if (!lastNotifiedTime || now - parseInt(lastNotifiedTime, 10) >= 7200000) {
-          new Notification("Sādhana Pending!", {
-            body: message
-          });
+          try {
+            if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+              new Notification("Sadhana Pending!", {
+                body: message
+              });
+            }
+          } catch (e) {
+            console.log('Notification API not supported or failed', e);
+          }
           localStorage.setItem(lastNotifiedKey, now.toString());
         }
       }
@@ -347,33 +378,6 @@ function App() {
                   </span>
                 )}
               </button>
-              
-              {showNotifications && (
-                <div className="animate-fade-in" style={{ position: 'fixed', top: '70px', left: '50%', transform: 'translateX(-50%)', width: '90vw', maxWidth: '350px', background: 'var(--bg-card)', border: '1px solid var(--border-highlight)', borderRadius: '12px', padding: '1rem', boxShadow: '0 15px 35px rgba(0,0,0,0.7)', zIndex: 9999 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.5rem' }}>
-                    <h4 style={{ margin: 0, color: 'var(--text-main)' }}>Notifications</h4>
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                      {notifications.length > 0 && (
-                        <button onClick={handleClearNotifications} style={{ background: 'none', border: 'none', color: 'var(--primary-amber)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold' }}>Clear All</button>
-                      )}
-                      <button onClick={() => setShowNotifications(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={16} /></button>
-                    </div>
-                  </div>
-                  
-                  {notifications.length === 0 ? (
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', textAlign: 'center' }}>No new notifications.</p>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', maxHeight: '300px', overflowY: 'auto' }}>
-                      {notifications.map(n => (
-                        <div key={n.id} style={{ background: 'var(--bg-main)', padding: '0.8rem', borderRadius: '8px', borderLeft: `3px solid ${n.type === 'warning' ? '#f59e0b' : '#3b82f6'}` }}>
-                          <h5 style={{ margin: '0 0 0.3rem 0', color: 'var(--text-main)', fontSize: '0.95rem' }}>{n.title}</h5>
-                          <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.85rem' }}>{n.message}</p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
 
             {/* User Profile Button */}
@@ -471,6 +475,37 @@ function App() {
           © 2026 All rights reserved | ISKCON Bhadaj, Ahmedabad | Managed by FOLK
         </p>
       </footer>
+
+      {/* Notifications Modal (Moved to root to prevent clipping) */}
+      {showNotifications && (
+        <>
+          <div onClick={() => setShowNotifications(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9998 }} />
+          <div className="animate-fade-in" style={{ position: 'fixed', top: '75px', left: '50%', transform: 'translateX(-50%)', width: '90vw', maxWidth: '350px', background: 'var(--bg-card)', border: '1px solid var(--border-highlight)', borderRadius: '12px', padding: '1rem', boxShadow: '0 15px 35px rgba(0,0,0,0.7)', zIndex: 9999 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.5rem' }}>
+              <h4 style={{ margin: 0, color: 'var(--text-main)' }}>Notifications</h4>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                {notifications.length > 0 && (
+                  <button onClick={handleClearNotifications} style={{ background: 'none', border: 'none', color: 'var(--primary-amber)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold' }}>Clear All</button>
+                )}
+                <button onClick={() => setShowNotifications(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={16} /></button>
+              </div>
+            </div>
+            
+            {notifications.length === 0 ? (
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', textAlign: 'center' }}>No new notifications.</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', maxHeight: '300px', overflowY: 'auto' }}>
+                {notifications.map(n => (
+                  <div key={n.id} style={{ background: 'var(--bg-main)', padding: '0.8rem', borderRadius: '8px', borderLeft: `3px solid ${n.type === 'warning' ? '#f59e0b' : '#3b82f6'}` }}>
+                    <h5 style={{ margin: '0 0 0.3rem 0', color: 'var(--text-main)', fontSize: '0.95rem' }}>{n.title}</h5>
+                    <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.85rem' }}>{n.message}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
 
       {/* Settings Modal */}
       {showSettings && (

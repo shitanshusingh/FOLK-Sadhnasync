@@ -17,8 +17,7 @@ import autoTable from 'jspdf-autotable';
 import folkLogo from '../assets/folk_logo.png';
 import iskconLogo from '../assets/iskcon_logo.png';
 import { generateSadhanaPDFReport } from '../utils/pdfGenerator';
-import { cloudSaveResidency } from '../services/firebase';
-import { cloudSaveCampaign, cloudSaveUser } from '../services/firebase';
+import { cloudSaveResidency, cloudSaveCampaign, cloudSaveUser, cloudFetchAllUsers } from '../services/firebase';
 
 // Import all Devotee App Components so Guide can view the full App Experience for any boy!
 import Dashboard from './Dashboard';
@@ -100,12 +99,20 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
 
   useEffect(() => {
     refreshData();
+    
+    // DEEP ROOT CONNECT: Listen for real-time live sync events from Firebase
+    const handleLiveSync = () => refreshData();
+    window.addEventListener('sadhana_live_sync', handleLiveSync);
+
+    return () => {
+      window.removeEventListener('sadhana_live_sync', handleLiveSync);
+    };
   }, [currentUser]);
 
   const refreshData = () => {
-    const users = JSON.parse(localStorage.getItem('sadhana_users') || '[]');
+    const users = JSON.parse(localStorage.getItem('sadhana_users') || '[]').filter(Boolean);
     setAllUsers(users);
-    const mine = users.filter(u => u.guide === currentUser.name && u.role !== 'guide' && u.role !== 'admin');
+    const mine = users.filter(u => u && u.guide === currentUser.name && u.role !== 'guide' && u.role !== 'admin');
     setMyDevotees(mine);
 
     const res = JSON.parse(localStorage.getItem('sadhana_residencies') || '[]').filter(r => r.guide === currentUser.name);
@@ -400,34 +407,6 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
                   </span>
                 )}
               </button>
-
-              {showNotifications && (
-                <div onClick={e => e.stopPropagation()} className="animate-fade-in" style={{ position: 'fixed', top: '70px', left: '50%', transform: 'translateX(-50%)', width: '90vw', maxWidth: '350px', background: 'var(--bg-card)', border: '1px solid var(--border-highlight)', borderRadius: '16px', padding: '1.2rem', boxShadow: '0 15px 35px rgba(0,0,0,0.7)', zIndex: 9999, display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: '80vh', overflowY: 'auto' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h3 style={{ margin: 0, fontSize: '1rem', color: 'var(--primary-amber)' }}>Notifications</h3>
-                    <button onClick={() => setShowNotifications(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={16} /></button>
-                  </div>
-                  
-                  {notifications.filter(n => !clearedNotifs.includes(n.id)).length === 0 ? (
-                    <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem 0', fontSize: '0.9rem' }}>
-                      <Bell size={32} style={{ opacity: 0.2, margin: '0 auto 0.5rem auto' }} />
-                      No new notifications
-                    </div>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-                      {notifications.filter(n => !clearedNotifs.includes(n.id)).map(n => (
-                        <div key={n.id} style={{ padding: '0.8rem', background: 'var(--bg-input)', borderRadius: '8px', borderLeft: '3px solid var(--accent-blue)', fontSize: '0.85rem' }}>
-                          <strong style={{ display: 'block', color: 'var(--text-main)', marginBottom: '0.2rem' }}>{n.title || n.sender}</strong>
-                          <span style={{ color: 'var(--text-muted)', lineHeight: '1.4' }}>{n.message}</span>
-                        </div>
-                      ))}
-                      <button onClick={handleClearNotifications} className="nav-btn btn-secondary" style={{ width: '100%', marginTop: '0.5rem', padding: '0.5rem', fontSize: '0.85rem' }}>
-                        <CheckCircle size={14} /> Mark All as Read
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -1211,6 +1190,38 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
           © 2026 All rights reserved | ISKCON Bhadaj, Ahmedabad | Managed by FOLK
         </p>
       </footer>
+
+      {/* Guide Dashboard Notifications Modal (Moved to root to prevent clipping) */}
+      {showNotifications && (
+        <>
+          <div onClick={() => setShowNotifications(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9998 }} />
+          <div onClick={e => e.stopPropagation()} className="animate-fade-in" style={{ position: 'fixed', top: '75px', left: '50%', transform: 'translateX(-50%)', width: '90vw', maxWidth: '350px', background: 'var(--bg-card)', border: '1px solid var(--border-highlight)', borderRadius: '16px', padding: '1.2rem', boxShadow: '0 15px 35px rgba(0,0,0,0.7)', zIndex: 9999, display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: '80vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: '1rem', color: 'var(--primary-amber)' }}>Notifications</h3>
+              <button onClick={() => setShowNotifications(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={16} /></button>
+            </div>
+            
+            {notifications.filter(n => !clearedNotifs.includes(n.id)).length === 0 ? (
+              <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem 0', fontSize: '0.9rem' }}>
+                <Bell size={32} style={{ opacity: 0.2, margin: '0 auto 0.5rem auto' }} />
+                No new notifications
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                {notifications.filter(n => !clearedNotifs.includes(n.id)).map(n => (
+                  <div key={n.id} style={{ padding: '0.8rem', background: 'var(--bg-input)', borderRadius: '8px', borderLeft: '3px solid var(--accent-blue)', fontSize: '0.85rem' }}>
+                    <strong style={{ display: 'block', color: 'var(--text-main)', marginBottom: '0.2rem' }}>{n.title || n.sender}</strong>
+                    <span style={{ color: 'var(--text-muted)', lineHeight: '1.4' }}>{n.message}</span>
+                  </div>
+                ))}
+                <button onClick={handleClearNotifications} className="nav-btn btn-secondary" style={{ width: '100%', marginTop: '0.5rem', padding: '0.5rem', fontSize: '0.85rem' }}>
+                  <CheckCircle size={14} /> Mark All as Read
+                </button>
+              </div>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 };
