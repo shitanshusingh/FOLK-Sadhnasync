@@ -159,8 +159,7 @@ const SettingsModal = ({ user, onClose, onLogout }) => {
         backgroundColor: '#1e293b', borderRadius: '20px',
         border: '1px solid #475569', width: '100%', maxWidth: '900px', height: '80vh',
         boxShadow: '0 25px 50px -12px rgba(0,0,0,0.8)', color: '#f8fafc',
-        display: 'flex', overflow: 'hidden'
-      }}>
+        display: 'flex', overflow: 'hidden' }} className="settings-modal-wrapper">
         
         {/* Sidebar Nav */}
         <div style={{ width: '250px', background: 'rgba(15, 23, 42, 0.5)', borderRight: '1px solid #334155', display: 'flex', flexDirection: 'column' }}>
@@ -369,3 +368,6 @@ const SettingsModal = ({ user, onClose, onLogout }) => {
 };
 
 export default SettingsModal;
+
+
+

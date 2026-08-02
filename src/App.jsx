@@ -15,7 +15,7 @@ import GuideDashboard from './components/GuideDashboard';
 import { subDays, format } from 'date-fns';
 import { calculatePoints } from './utils/scoring';
 import {
-  cloudFetchAllUsers, cloudSaveUser, cloudFetchCampaigns, subscribeToCloudUpdates, cloudFetchNotifications, cloudFetchResidencies
+  cloudFetchAllUsers, cloudSaveUser, cloudFetchCampaigns, subscribeToCloudUpdates, cloudFetchNotifications, cloudFetchResidencies, cloudSaveResidency
 } from './services/firebase';
 import { isCloudActive } from './services/firebase';
 
@@ -52,7 +52,13 @@ function App() {
   useEffect(() => {
     cloudFetchAllUsers().catch(console.error);
     cloudFetchNotifications().catch(console.error);
-    cloudFetchResidencies().catch(console.error);
+    cloudFetchResidencies().then(() => {
+      // ONE-TIME MIGRATION: Push local residencies to cloud if not already synced
+      const localResidencies = JSON.parse(localStorage.getItem('sadhana_residencies') || '[]');
+      localResidencies.forEach(res => {
+        cloudSaveResidency(res).catch(console.error);
+      });
+    }).catch(console.error);
   }, []);
 
   // Ensure Super Admin exists (only locally if cloud is not active yet)

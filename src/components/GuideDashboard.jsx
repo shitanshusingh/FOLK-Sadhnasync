@@ -505,7 +505,7 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
         {!selectedDevotee && activeTab === 'overview' && (
           <div className="animate-fade-in">
             {/* KPI Row */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
+            <div className="guide-kpi-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
               <StatCard label="Filtered Devotees" value={filteredDevotees.length} icon={Users} color="#f59e0b" sub={`${totalResidents} Residents · ${totalNonResidents} Non-Res · ${totalBeginners} Beginners`} />
               <StatCard label="Group Avg Score" value={`${overallAvg}/20`} icon={Star} color="#10b981" sub="30-day average score" />
               <StatCard label="Top Performer" value={topPerformer?.name?.split(' ')[0] || '—'} icon={Award} color="#8b5cf6" sub={topPerformer ? `${topPerformer.avg}/20 avg score` : ''} />
@@ -513,7 +513,7 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
             </div>
 
             {/* Charts Row */}
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+            <div className="guide-charts-row" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
               <div className="panel">
                 <h3 className="panel-title" style={{ marginBottom: '1.2rem' }}>📈 Group Average Score (Last 14 Days)</h3>
                 <ResponsiveContainer width="100%" height={230}>

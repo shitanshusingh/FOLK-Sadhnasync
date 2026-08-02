@@ -644,20 +644,20 @@ const Dashboard = ({ currentUser, setActiveTab, setPrefilledDate }) => {
       )}
 
       {/* Global Month Selector */}
-      <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1.5rem', marginBottom: '1.5rem' }}>
+        <button className="nav-btn btn-secondary" onClick={() => { setSlideDirection('left'); setDashboardDate(subMonths(dashboardDate, 1)); }} style={{ padding: '0.5rem', borderRadius: '50%' }}>
+          <ChevronLeft size={20} />
+        </button>
         <h2 style={{ margin: 0, fontSize: '1.5rem', color: 'var(--primary-amber)', fontWeight: 'bold' }}>
           {format(dashboardDate, 'MMMM yyyy')} Summary
         </h2>
+        <button className="nav-btn btn-secondary" onClick={() => { setSlideDirection('right'); setDashboardDate(addMonths(dashboardDate, 1)); }} style={{ padding: '0.5rem', borderRadius: '50%' }}>
+          <ChevronRight size={20} />
+        </button>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
-        
-        <button className="nav-btn btn-secondary" onClick={() => { setSlideDirection('left'); setDashboardDate(subMonths(dashboardDate, 1)); }} style={{ padding: '0.8rem', borderRadius: '50%', flexShrink: 0 }}>
-          <ChevronLeft size={24} />
-        </button>
-        
-        <div style={{ flex: 1, overflow: 'hidden', padding: '0.5rem 0' }}>
-          <div key={dashboardDate.toString()} className={`slide-in-${slideDirection}`} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      <div style={{ marginBottom: '2rem' }}>
+        <div key={dashboardDate.toString()} className={`slide-in-${slideDirection}`} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         
         {/* Overall Pie Chart Section */}
         <div style={{ background: 'var(--bg-card)', padding: '1.5rem', borderRadius: '20px', border: '1px solid var(--border-highlight)', display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
@@ -716,130 +716,7 @@ const Dashboard = ({ currentUser, setActiveTab, setPrefilledDate }) => {
             </button>
           </div>
         </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem', width: '100%' }}>
-          
-          {/* 1st Card: Goals Auto-Carousel */}
-          <div style={{ background: 'var(--bg-card)', padding: '0.6rem 1.6rem', borderRadius: '16px', border: '1px solid var(--border-highlight)', display: 'flex', alignItems: 'center', boxShadow: '0 4px 15px rgba(245, 158, 11, 0.1)', position: 'relative', height: '92px', boxSizing: 'border-box', minWidth: 0 }}>
-            <button onClick={() => setActiveGoalSlide(p => p === 0 ? 2 : p - 1)} style={{ position: 'absolute', left: '4px', top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px' }}><ChevronLeft size={14} /></button>
-            <button onClick={() => setActiveGoalSlide(p => p === 2 ? 0 : p + 1)} style={{ position: 'absolute', right: '4px', top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px' }}><ChevronRight size={14} /></button>
-            <button onClick={() => setShowGoalModal(true)} style={{ position: 'absolute', top: '4px', right: '4px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', zIndex: 10 }} title="Set Monthly Goals"><Edit3 size={12} /></button>
-
-            <div style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
-              {activeGoalSlide === 0 && (
-                <>
-                  <Flame size={24} color="#ef4444" fill="#ef4444" style={{ flexShrink: 0 }} />
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Current Streak</div>
-                    <div style={{ fontSize: '1.1rem', color: 'var(--primary-amber)', fontWeight: 'bold', whiteSpace: 'nowrap' }}>{fireStreak} Days</div>
-                  </div>
-                </>
-              )}
-              {activeGoalSlide === 1 && (
-                <>
-                  <Target size={24} color="#10b981" style={{ flexShrink: 0 }} />
-                  <div style={{ width: '100%', minWidth: 0, flex: 1 }}>
-                    <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', gap: '4px' }}>
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Japa Goal</span>
-                      <span style={{ color: '#10b981', flexShrink: 0 }}>{monthlyStats.totalRounds}/{customGoals.rounds}</span>
-                    </div>
-                    <div style={{ width: '100%', height: '4px', background: 'var(--bg-main)', borderRadius: '2px', marginTop: '4px' }}>
-                      <div style={{ width: `${Math.min((monthlyStats.totalRounds / customGoals.rounds) * 100, 100)}%`, height: '100%', background: '#10b981', borderRadius: '2px', transition: 'width 0.5s' }}></div>
-                    </div>
-                  </div>
-                </>
-              )}
-              {activeGoalSlide === 2 && (
-                <>
-                  <Target size={24} color="#3b82f6" style={{ flexShrink: 0 }} />
-                  <div style={{ width: '100%', minWidth: 0, flex: 1 }}>
-                    <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', gap: '4px' }}>
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Reading Goal</span>
-                      <span style={{ color: '#3b82f6', flexShrink: 0 }}>{monthlyStats.totalReading}/{customGoals.reading}m</span>
-                    </div>
-                    <div style={{ width: '100%', height: '4px', background: 'var(--bg-main)', borderRadius: '2px', marginTop: '4px' }}>
-                      <div style={{ width: `${Math.min((monthlyStats.totalReading / customGoals.reading) * 100, 100)}%`, height: '100%', background: '#3b82f6', borderRadius: '2px', transition: 'width 0.5s' }}></div>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* 2nd Card: Holy Names */}
-          <div style={{ background: 'var(--bg-card)', padding: '0.6rem 0.8rem', borderRadius: '16px', border: '1px solid var(--border-highlight)', display: 'flex', alignItems: 'center', gap: '0.6rem', boxShadow: '0 4px 15px rgba(16, 185, 129, 0.1)', height: '92px', boxSizing: 'border-box', minWidth: 0 }}>
-            <CheckCircle size={24} color="#10b981" style={{ flexShrink: 0 }} />
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Holy Names</div>
-              <div style={{ fontSize: '1.1rem', color: '#10b981', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{(monthlyStats.totalRounds * 108).toLocaleString()}</div>
-              <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>chanted this month</div>
-            </div>
-          </div>
-
-          {/* 3rd Card: Total Reading */}
-          <div style={{ background: 'var(--bg-card)', padding: '0.6rem 0.8rem', borderRadius: '16px', border: '1px solid var(--border-highlight)', display: 'flex', alignItems: 'center', gap: '0.6rem', boxShadow: '0 4px 15px rgba(59, 130, 246, 0.1)', height: '92px', boxSizing: 'border-box', minWidth: 0 }}>
-            <Clock size={24} color="#3b82f6" style={{ flexShrink: 0 }} />
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Total Reading</div>
-              <div style={{ fontSize: '1.1rem', color: '#3b82f6', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{(monthlyStats.totalReading / 60).toFixed(1)} Hrs</div>
-              <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>completed this month</div>
-            </div>
-          </div>
-
-          {/* 4th Card: Mini Carousel */}
-          <div style={{ background: 'var(--bg-card)', padding: '0.6rem 1.6rem', borderRadius: '16px', border: '1px solid var(--border-highlight)', display: 'flex', alignItems: 'center', boxShadow: '0 4px 15px rgba(139, 92, 246, 0.1)', position: 'relative', height: '92px', boxSizing: 'border-box', minWidth: 0 }}>
-            <button onClick={() => setActiveMiniCard(p => p === 0 ? 2 : p - 1)} style={{ position: 'absolute', left: '4px', top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px' }}><ChevronLeft size={14} /></button>
-            <button onClick={() => setActiveMiniCard(p => p === 2 ? 0 : p + 1)} style={{ position: 'absolute', right: '4px', top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px' }}><ChevronRight size={14} /></button>
-
-            <div style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
-              {activeMiniCard === 0 && (
-                <>
-                  <Target size={24} color="#f59e0b" style={{ flexShrink: 0 }} />
-                  <div style={{ width: '100%', minWidth: 0, flex: 1 }}>
-                    <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', gap: '4px' }}>
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Avg Score</span>
-                      <span style={{ color: '#f59e0b', flexShrink: 0 }}>{advancedStats.avgScore}/20</span>
-                    </div>
-                    <div style={{ width: '100%', height: '4px', background: 'var(--bg-main)', borderRadius: '2px', marginTop: '4px' }}>
-                      <div style={{ width: `${Math.min((advancedStats.avgScore / 20) * 100, 100)}%`, height: '100%', background: '#f59e0b', borderRadius: '2px' }}></div>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {activeMiniCard === 1 && (
-                <>
-                  <Clock size={24} color="#8b5cf6" style={{ flexShrink: 0 }} />
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Avg Wake-up</div>
-                    <div style={{ fontSize: '1.1rem', color: '#8b5cf6', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{advancedStats.avgWakeup}</div>
-                  </div>
-                </>
-              )}
-
-              {activeMiniCard === 2 && (
-                <>
-                  <CheckCircle size={24} color="#10b981" style={{ flexShrink: 0 }} />
-                  <div style={{ width: '100%', minWidth: 0, flex: 1 }}>
-                    <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', gap: '4px' }}>
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Perfect Days</span>
-                      <span style={{ color: '#10b981', flexShrink: 0 }}>{advancedStats.perfectDays}/{advancedStats.daysCount}</span>
-                    </div>
-                    <div style={{ width: '100%', height: '4px', background: 'var(--bg-main)', borderRadius: '2px', marginTop: '4px' }}>
-                      <div style={{ width: `${advancedStats.daysCount ? Math.min((advancedStats.perfectDays / advancedStats.daysCount) * 100, 100) : 0}%`, height: '100%', background: '#10b981', borderRadius: '2px' }}></div>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
         </div>
-      </div>
-    </div>
-
-        <button className="nav-btn btn-secondary" onClick={() => { setSlideDirection('right'); setDashboardDate(addMonths(dashboardDate, 1)); }} style={{ padding: '0.8rem', borderRadius: '50%', flexShrink: 0 }}>
-          <ChevronRight size={24} />
-        </button>
       </div>
 
       {/* Monthly Overview Calendar */}
@@ -1395,4 +1272,5 @@ const Dashboard = ({ currentUser, setActiveTab, setPrefilledDate }) => {
 };
 
 export default Dashboard;
+
 

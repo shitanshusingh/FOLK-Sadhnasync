@@ -555,3 +555,54 @@ input[type="time"].form-control {
     flex-direction: column !important;
   }
 }
+
+/* NEW FIXES FOR 8-POINT PLAN */
+@media (max-width: 768px) {
+  /* Fix App.jsx Top Navbar wrapping */
+  .nav-content {
+    flex-wrap: nowrap !important;
+    justify-content: space-between !important;
+    overflow-x: auto !important;
+  }
+  .nav-actions {
+    flex-wrap: nowrap !important;
+  }
+  
+  /* Settings Modal Vertical Stack */
+  .settings-modal-wrapper {
+    flex-direction: column !important;
+    height: 90vh !important;
+    overflow-y: auto !important;
+  }
+  .settings-modal-wrapper > div:first-child {
+    width: 100% !important;
+    border-right: none !important;
+    border-bottom: 1px solid #334155 !important;
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    height: auto !important;
+    padding: 0.5rem !important;
+  }
+  .settings-modal-wrapper > div:first-child > div:first-child {
+    display: none !important;
+  }
+  .settings-modal-wrapper > div:first-child > div:last-child {
+    flex-direction: row !important;
+    padding: 0 !important;
+  }
+
+  /* Guide Dashboard horizontal scrolling for cards */
+  .guide-kpi-row {
+    display: flex !important;
+    overflow-x: auto !important;
+    flex-wrap: nowrap !important;
+    padding-bottom: 10px !important;
+  }
+  .guide-kpi-row > div {
+    min-width: 200px !important;
+    flex-shrink: 0 !important;
+  }
+  .guide-charts-row {
+    grid-template-columns: 1fr !important;
+  }
+}

@@ -3,76 +3,7 @@ import { Trophy, Medal, Award, Flame, Clock, BookOpen, Star, Target, Gift, Calen
 import { format, startOfMonth, parseISO, isWithinInterval, endOfMonth, differenceInMinutes, parse, startOfWeek, endOfWeek, startOfDay, endOfDay, startOfQuarter, endOfQuarter, startOfYear, endOfYear } from 'date-fns';
 import { calculatePoints } from '../utils/scoring';
 
-const generateDummyData = (currentUser) => {
-  const bucketKey = `sadhana_leaderboard_seeded_${currentUser.status}_${currentUser.guide}_${currentUser.residency}`;
-  if (localStorage.getItem(bucketKey)) return;
 
-  const names = ["Ananda Das", "Bhakta Rahul", "Caitanya Das", "Bhakta Amit", "Govinda Das", "Hari Das", "Bhakta Vikram", "Bhakta Suresh", "Krishna Das", "Madhava Das"];
-  const thisMonthStart = startOfMonth(new Date());
-  
-  const dummyUsers = names.map((name, idx) => ({
-    name,
-    email: `dummy${idx}@folk.com`,
-    status: currentUser.status,
-    guide: currentUser.guide,
-    residency: currentUser.residency
-  }));
-
-  dummyUsers.forEach(u => {
-    localStorage.setItem(`sadhana_user_${u.email}`, JSON.stringify(u));
-    const history = [];
-    
-    // Generate some history for this month
-    for(let i = 1; i <= new Date().getDate(); i++) {
-      // Randomly skip some days
-      if (Math.random() > 0.8) continue;
-      
-      const dateStr = format(new Date(thisMonthStart.getFullYear(), thisMonthStart.getMonth(), i), 'yyyy-MM-dd');
-      
-      const isResident = u.status === 'FOLK Resident';
-      const isBeginner = u.status === 'Beginner';
-      
-      let baseScore = 0;
-      let activityTimes = {};
-      let details = {};
-
-      if (isBeginner) {
-        details.totalRounds = Math.floor(Math.random() * 8) + 1; // 1 to 8 rounds
-        details.readingDuration = Math.floor(Math.random() * 30) + 10;
-        details.hearingDuration = Math.floor(Math.random() * 30) + 10;
-        baseScore = details.totalRounds * 2 + (details.readingDuration/10) + (details.hearingDuration/10);
-      } else if (isResident) {
-        activityTimes.mangala_arati = "04:30";
-        activityTimes.japa = "05:15";
-        activityTimes.class = "08:00";
-        activityTimes.yoga = "06:30";
-        activityTimes.reading = "20:00";
-        details.readingDuration = 30;
-        details.chantingCompletionTime = "07:30";
-        details.wakeupTime = "04:00";
-        baseScore = 18 + Math.floor(Math.random() * 4); // 18-21 points
-      } else {
-        // Non-resident
-        details.totalRounds = Math.floor(Math.random() * 16) + 1;
-        details.readingDuration = Math.floor(Math.random() * 40) + 10;
-        details.hearingDuration = Math.floor(Math.random() * 40) + 10;
-        details.chantingCompletionTime = "08:00";
-        details.wakeupTime = "05:30";
-        baseScore = details.totalRounds * 1.5;
-      }
-
-      history.push({
-        date: dateStr,
-        score: Math.min(Math.round(baseScore), 25),
-        activityTimes,
-        details
-      });
-    }
-    localStorage.setItem(`sadhana_history_${u.email}`, JSON.stringify(history));
-  });
-
-  localStorage.setItem(bucketKey, JSON.stringify(dummyUsers));
-};
 
 const Leaderboard = ({ currentUser }) => {
   const [leaderboardData, setLeaderboardData] = useState([]);
@@ -100,15 +31,19 @@ const Leaderboard = ({ currentUser }) => {
 
   // 2. Fetch and calculate scores based on selected activeTabMode
   useEffect(() => {
-    generateDummyData(currentUser);
-
     // 3. Gather all users in this bucket
     const allUsers = [];
-    allUsers.push(currentUser);
-
-    const bucketKey = `sadhana_leaderboard_seeded_${currentUser.status}_${currentUser.guide}_${currentUser.residency}`;
-    const dummies = JSON.parse(localStorage.getItem(bucketKey) || '[]');
-    allUsers.push(...dummies);
+    const allRegisteredUsers = JSON.parse(localStorage.getItem('sadhana_users') || '[]');
+    const matchedUsers = allRegisteredUsers.filter(u => 
+      u.status === currentUser.status && 
+      u.guide === currentUser.guide && 
+      u.residency === currentUser.residency
+    );
+    
+    if (!matchedUsers.find(u => u.email === currentUser.email)) {
+       matchedUsers.push(currentUser);
+    }
+    allUsers.push(...matchedUsers);
 
     // 4. Calculate Scores
     const now = new Date();
@@ -477,3 +412,4 @@ const Leaderboard = ({ currentUser }) => {
 };
 
 export default Leaderboard;
+
