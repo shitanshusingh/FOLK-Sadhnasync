@@ -39,8 +39,36 @@ const SignUp = ({ onAuthSuccess }) => {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setPhotoPreview(reader.result);
-        setPhotoBase64(reader.result);
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_SIZE = 250;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_SIZE) {
+              height *= MAX_SIZE / width;
+              width = MAX_SIZE;
+            }
+          } else {
+            if (height > MAX_SIZE) {
+              width *= MAX_SIZE / height;
+              height = MAX_SIZE;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // Compress as JPEG
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.6);
+          setPhotoPreview(compressedBase64);
+          setPhotoBase64(compressedBase64);
+        };
+        img.src = reader.result;
       };
       reader.readAsDataURL(file);
     }
@@ -64,52 +92,61 @@ const SignUp = ({ onAuthSuccess }) => {
     if (data.branch) data.branch = data.branch.toUpperCase();
     if (data.institution) data.institution = data.institution.toUpperCase();
 
-    const users = JSON.parse(localStorage.getItem('sadhana_users') || '[]');
-    
-    // Generate User ID (e.g., sinek@folk.in)
-    const firstName = data.name.split(' ')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
-    let baseId = `${firstName}@folk.in`;
-    let uniqueId = baseId;
-    let counter = 1;
-    while (users.find(u => u.userId === uniqueId)) {
-      uniqueId = `${firstName}${counter}@folk.in`;
-      counter++;
+    try {
+      const users = JSON.parse(localStorage.getItem('sadhana_users') || '[]');
+      
+      // Generate User ID (e.g., sinek@folk.in)
+      const firstName = data.name.split(' ')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
+      let baseId = `${firstName}@folk.in`;
+      let uniqueId = baseId;
+      let counter = 1;
+      while (users.find(u => u.userId === uniqueId)) {
+        uniqueId = `${firstName}${counter}@folk.in`;
+        counter++;
+      }
+      data.userId = uniqueId;
+
+      if (users.find(u => u.email === data.email)) {
+        setError('An account with this email already exists.');
+        return;
+      }
+
+      if (!localStorage.getItem(`sadhana_history_${data.email}`)) {
+        localStorage.setItem(`sadhana_history_${data.email}`, '[]');
+      }
+
+      users.push(data);
+      localStorage.setItem('sadhana_users', JSON.stringify(users));
+
+      // ☁️ Sync new user to Firebase cloud — so they can login from any device
+      cloudSaveUser(data);
+      
+      // 🔔 Send direct notification to their Guide
+      if (data.guide) {
+        cloudSaveNotification({
+          id: `signup_${data.userId}_${Date.now()}`,
+          title: `👤 New Devotee: ${data.name}`,
+          message: `${data.name} has registered under your guidance as a ${data.status}.`,
+          type: 'info',
+          target: data.guide,
+          date: new Date().toISOString(),
+          sender: 'System'
+        });
+      }
+
+      // Store remembered email so refresh doesn't log them out
+      localStorage.setItem('sadhana_remembered_email', data.email);
+      
+      alert(`Registration Successful!\nYour generated User ID is: ${data.userId}\nYou can login using this ID or your email.`);
+      onAuthSuccess(data);
+    } catch (err) {
+      console.error(err);
+      if (err.name === 'QuotaExceededError') {
+        setError('Storage is full. Please try signing up again without a photo, or clear browser cache.');
+      } else {
+        setError('An error occurred during signup: ' + err.message);
+      }
     }
-    data.userId = uniqueId;
-
-    if (users.find(u => u.email === data.email)) {
-      setError('An account with this email already exists.');
-      return;
-    }
-
-    if (!localStorage.getItem(`sadhana_history_${data.email}`)) {
-      localStorage.setItem(`sadhana_history_${data.email}`, '[]');
-    }
-
-    users.push(data);
-    localStorage.setItem('sadhana_users', JSON.stringify(users));
-
-    // ☁️ Sync new user to Firebase cloud — so they can login from any device
-    cloudSaveUser(data);
-    
-    // 🔔 Send direct notification to their Guide
-    if (data.guide) {
-      cloudSaveNotification({
-        id: `signup_${data.userId}_${Date.now()}`,
-        title: `👤 New Devotee: ${data.name}`,
-        message: `${data.name} has registered under your guidance as a ${data.status}.`,
-        type: 'info',
-        target: data.guide,
-        date: new Date().toISOString(),
-        sender: 'System'
-      });
-    }
-
-    // Store remembered email so refresh doesn't log them out
-    localStorage.setItem('sadhana_remembered_email', data.email);
-    
-    alert(`Registration Successful!\nYour generated User ID is: ${data.userId}\nYou can login using this ID or your email.`);
-    onAuthSuccess(data);
   };
 
   const inputStyle = { width: '100%', fontSize: '0.95rem', padding: '0.8rem', backgroundColor: '#0b1120', borderColor: '#334155', color: '#f8fafc' };
@@ -117,7 +154,6 @@ const SignUp = ({ onAuthSuccess }) => {
 
   return (
     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem', maxHeight: '55vh', overflowY: 'auto', paddingRight: '10px' }}>
-      {error && <div style={{ color: '#ef4444', textAlign: 'center', fontSize: '0.9rem', background: 'rgba(239, 68, 68, 0.1)', padding: '0.5rem', borderRadius: '4px' }}>{error}</div>}
       
       {/* Photo Upload */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
@@ -261,6 +297,12 @@ const SignUp = ({ onAuthSuccess }) => {
           <input type="text" name="securityAnswer" className="form-control" style={inputStyle} placeholder="Enter your answer" required />
         </div>
       </div>
+
+      {error && (
+        <div className="animate-fade-in" style={{ color: '#ef4444', textAlign: 'center', fontSize: '0.95rem', fontWeight: 'bold', background: 'rgba(239, 68, 68, 0.15)', padding: '0.8rem', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+          ⚠️ {error}
+        </div>
+      )}
 
       <button type="submit" className="btn-rgb-action" style={{
         padding: '0.85rem',

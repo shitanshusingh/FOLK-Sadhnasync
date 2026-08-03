@@ -63,7 +63,9 @@ const AdminDashboard = ({ currentUser, onLogout, onImpersonate }) => {
     const hist = JSON.parse(localStorage.getItem(`sadhana_history_${email}`) || '[]');
     if (!hist.length) return { avg: 0, streak: 0, total: 0 };
     const sorted = [...hist].sort((a, b) => b.date.localeCompare(a.date));
-    const avg = Math.round(hist.reduce((s, h) => s + (h.score || 0), 0) / hist.length);
+    let sumScore = 0; let sumMax = 0;
+    hist.forEach(h => { sumScore += (h.score || 0); sumMax += (h.maxScore || 20); });
+    const avg = sumMax > 0 ? Math.round((sumScore / sumMax) * 20) : 0;
     let streak = 0;
     for (let h of sorted) {
       if (h.score > 0) streak++;

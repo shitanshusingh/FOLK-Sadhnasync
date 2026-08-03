@@ -1,5 +1,19 @@
+export const DEFAULT_RESIDENCY_CONFIG = {
+  mangala_arati: { enabled: true, time: "05:00" },
+  japa: { enabled: true, time: "05:30" },
+  reading: { enabled: true, time: "06:30" },
+  class: { enabled: true, time: "07:00" },
+  yoga: { enabled: true, time: "07:30" }
+};
+
+const parseTimeToMins = (timeStr) => {
+  if (!timeStr) return 0;
+  const [hours, minutes] = timeStr.split(':').map(Number);
+  return hours * 60 + minutes;
+};
+
 export const getAbsentCode = (reasonStr) => {
-  if (!reasonStr) return 'AB'; // Default Absent
+  if (!reasonStr) return 'AB';
   if (reasonStr.includes('Sick')) return 'SK';
   if (reasonStr.includes('Service')) return 'AS';
   if (reasonStr.includes('Travel')) return 'AT';
@@ -7,43 +21,40 @@ export const getAbsentCode = (reasonStr) => {
   return 'AB';
 };
 
-export const calculatePoints = (activityId, timeStr) => {
+export const calculatePoints = (activityId, timeStr, config = null) => {
   if (!timeStr) return 0;
   
-  // Convert HH:MM to minutes for easy comparison
-  const [hours, minutes] = timeStr.split(':').map(Number);
-  const timeInMins = hours * 60 + minutes;
+  const timeInMins = parseTimeToMins(timeStr);
+  const actConfig = config && config[activityId] ? config[activityId] : DEFAULT_RESIDENCY_CONFIG[activityId];
+  
+  if (!actConfig || !actConfig.enabled) return 0;
+
+  const baseMins = parseTimeToMins(actConfig.time);
 
   switch (activityId) {
     case 'mangala_arati':
-      // till 5:05 AM = 4 pts. Before 5:15 AM = 2 pts. After 0 pts.
-      if (timeInMins <= (5 * 60 + 5)) return 4;
-      if (timeInMins <= (5 * 60 + 15)) return 2;
+      if (timeInMins <= (baseMins + 5)) return 4;
+      if (timeInMins <= (baseMins + 15)) return 2;
       return 0;
       
     case 'japa':
-      // till 5:35 AM = 4 pts. Before 6:00 AM = 2 pts. After = 0 pts.
-      if (timeInMins <= (5 * 60 + 35)) return 4;
-      if (timeInMins <= (6 * 60 + 0)) return 2;
+      if (timeInMins <= (baseMins + 5)) return 4;
+      if (timeInMins <= (baseMins + 30)) return 2;
       return 0;
 
     case 'reading':
-      // from 6:30 to 7:00. Let's say <= 6:30 is 4, <= 7:00 is 2
-      if (timeInMins <= (6 * 60 + 30)) return 4;
-      if (timeInMins <= (7 * 60 + 0)) return 2;
+      if (timeInMins <= baseMins) return 4;
+      if (timeInMins <= (baseMins + 30)) return 2;
       return 0;
       
     case 'class':
-      // Before 7:05 AM = 4 pts. till 7:15 AM = 2 pts. After = 0 pts.
-      if (timeInMins <= (7 * 60 + 5)) return 4;
-      if (timeInMins <= (7 * 60 + 15)) return 2;
+      if (timeInMins <= (baseMins + 5)) return 4;
+      if (timeInMins <= (baseMins + 15)) return 2;
       return 0;
       
     case 'yoga':
-      // till 7:35 AM = 4 pts. After 7:45 = 2 pts. then 0
-      // (Yoga is optional, but if entered, these are the points)
-      if (timeInMins <= (7 * 60 + 35)) return 4;
-      if (timeInMins <= (7 * 60 + 45)) return 2;
+      if (timeInMins <= (baseMins + 5)) return 4;
+      if (timeInMins <= (baseMins + 15)) return 2;
       return 0;
 
     default:

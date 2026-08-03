@@ -143,7 +143,9 @@ const Leaderboard = ({ currentUser }) => {
       const ekadashiDatesArr = (activeCampaign?.ekadashiDates || '').split(',').map(s => s.trim());
 
       filteredHistory.forEach(entry => {
-        let entryScore = (entry.score || 0);
+        const maxS = entry.maxScore || 20;
+        let normalizedScore = maxS > 0 ? (entry.score / maxS) * 20 : 0;
+        let entryScore = normalizedScore;
 
         // Ekadashi 2X Multiplier Check
         if (activeTabMode === 'campaign' && activeCampaign?.enableEkadashi2x) {
@@ -169,7 +171,7 @@ const Leaderboard = ({ currentUser }) => {
 
       return {
         ...user,
-        totalScore,
+        totalScore: Math.round(totalScore),
         totalReading,
         totalHearing,
         avgWakeupMins

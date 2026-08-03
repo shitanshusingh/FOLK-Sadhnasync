@@ -25,6 +25,8 @@ import SadhanaTracker from './SadhanaTracker';
 import Leaderboard from './Leaderboard';
 import BucketList from './BucketList';
 import FocusTimer from './FocusTimer';
+import { DEFAULT_RESIDENCY_CONFIG } from '../utils/scoring';
+import ResidencyConfigModal from './ResidencyConfigModal';
 
 const TABS = [
   { id: 'overview', label: 'Overview & Analytics', icon: Home },
@@ -89,6 +91,7 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
 
   // New residency state
   const [newResidencyName, setNewResidencyName] = useState('');
+  const [editingResidency, setEditingResidency] = useState(null);
   const [statusMsg, setStatusMsg] = useState('');
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   
@@ -155,13 +158,22 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
     // Calculate average for CURRENT month only
     const currentMonthPrefix = format(new Date(), 'yyyy-MM');
     const thisMonthHist = hist.filter(h => h.date.startsWith(currentMonthPrefix));
-    const avg = thisMonthHist.length ? Math.round(thisMonthHist.reduce((s, h) => s + (h.score || 0), 0) / thisMonthHist.length) : 0;
     
-    const last7 = sorted.slice(0, 7).reduce((s, h) => s + (h.score || 0), 0) / 7;
-    const prev7 = sorted.slice(7, 14).reduce((s, h) => s + (h.score || 0), 0) / 7;
+    let sumScore = 0; let sumMax = 0;
+    thisMonthHist.forEach(h => { sumScore += (h.score || 0); sumMax += (h.maxScore || 20); });
+    const avg = sumMax > 0 ? Math.round((sumScore / sumMax) * 20) : 0;
+    
+    let last7Score = 0; let last7Max = 0;
+    sorted.slice(0, 7).forEach(h => { last7Score += (h.score || 0); last7Max += (h.maxScore || 20); });
+    const last7 = last7Max > 0 ? Math.round((last7Score / last7Max) * 20) : 0;
+    
+    let prev7Score = 0; let prev7Max = 0;
+    sorted.slice(7, 14).forEach(h => { prev7Score += (h.score || 0); prev7Max += (h.maxScore || 20); });
+    const prev7 = prev7Max > 0 ? Math.round((prev7Score / prev7Max) * 20) : 0;
+    
     let streak = 0;
     for (const h of sorted) { if ((h.score || 0) > 0) streak++; else break; }
-    return { avg, streak, total: hist.length, last7: Math.round(last7), trend: last7 > prev7 ? 'up' : 'down' };
+    return { avg, streak, total: hist.length, last7, trend: last7 > prev7 ? 'up' : 'down' };
   };
 
   // Inspect a devotee
@@ -314,13 +326,33 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
     e.preventDefault();
     if (!newResidencyName) return;
     const all = JSON.parse(localStorage.getItem('sadhana_residencies') || '[]');
-    const newRes = { id: `res_${Date.now()}`, name: newResidencyName, guide: currentUser.name };
+    const newRes = { id: `res_${Date.now()}`, name: newResidencyName, guide: currentUser.name, config: DEFAULT_RESIDENCY_CONFIG };
     all.push(newRes);
     localStorage.setItem('sadhana_residencies', JSON.stringify(all));
     cloudSaveResidency(newRes);
     setResidencies([...residencies, newRes]);
     setNewResidencyName('');
     showStatus('Residency created successfully!');
+  };
+
+  const handleUpdateResidencyConfig = (updatedRes) => {
+    const all = JSON.parse(localStorage.getItem('sadhana_residencies') || '[]');
+    const index = all.findIndex(r => r.id === updatedRes.id);
+    if (index >= 0) {
+      all[index] = updatedRes;
+      localStorage.setItem('sadhana_residencies', JSON.stringify(all));
+      cloudSaveResidency(updatedRes);
+      
+      const newResidenciesList = [...residencies];
+      const resIndex = newResidenciesList.findIndex(r => r.id === updatedRes.id);
+      if (resIndex >= 0) {
+        newResidenciesList[resIndex] = updatedRes;
+        setResidencies(newResidenciesList);
+      }
+      
+      showStatus('Residency settings saved successfully!');
+    }
+    setEditingResidency(null);
   };
 
   // Leaderboard data calculation
@@ -659,7 +691,7 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
           </div>
         )}
 
-        {/* ═══ DEVOTEES DIRECTORY TAB ═══ */}
+        {/* ═══ DEVOTEE DIRECTORY TAB ═══ */}
         {!selectedDevotee && activeTab === 'devotees' && (
           <div className="animate-fade-in">
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
@@ -1159,14 +1191,16 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
               </form>
             </div>
             <div className="panel">
-              <h3 className="panel-title" style={{ marginBottom: '1rem' }}>📍 Active Residencies</h3>
+              <h3 className="panel-title" style={{ marginBottom: '1rem' }}>🏢 Active Residencies</h3>
               {residencies.map(r => (
                 <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.85rem 1rem', background: 'var(--bg-input)', borderRadius: '10px', marginBottom: '0.5rem' }}>
                   <div>
                     <div style={{ fontWeight: '700', color: 'var(--text-main)' }}>{r.name}</div>
                     <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{myDevotees.filter(d => d.residency === r.name).length} assigned devotees</div>
                   </div>
-                  <Building2 size={20} color="#f59e0b" />
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button onClick={() => setEditingResidency(r)} className="btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem', borderRadius: '6px' }}>⚙️ Edit Settings</button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -1226,6 +1260,14 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
             )}
           </div>
         </>
+      )}
+
+      {editingResidency && (
+        <ResidencyConfigModal 
+          residency={editingResidency} 
+          onClose={() => setEditingResidency(null)} 
+          onSave={handleUpdateResidencyConfig} 
+        />
       )}
     </div>
   );

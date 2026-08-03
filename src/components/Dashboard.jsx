@@ -322,8 +322,13 @@ const Dashboard = ({ currentUser, setActiveTab, setPrefilledDate }) => {
     const read = calcActivity('reading');
     const sb = calcActivity('class');
 
-    const totalScoreSum = activeList.reduce((sum, h) => sum + (h.score || 0), 0);
-    const totalSadhanaPct = ((totalScoreSum / (totalDays * 20)) * 100).toFixed(2);
+    let totalScoreSum = 0;
+    let totalMaxScoreSum = 0;
+    activeList.forEach(h => {
+      totalScoreSum += (h.score || 0);
+      totalMaxScoreSum += (h.maxScore || 20);
+    });
+    const totalSadhanaPct = totalMaxScoreSum > 0 ? ((totalScoreSum / totalMaxScoreSum) * 100).toFixed(2) : "0.00";
 
     const totalReadingMins = activeList.reduce((sum, h) => sum + Number(h.details?.readingDuration || 0), 0);
     const readingHrs = Math.floor(totalReadingMins / 60);

@@ -1,14 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, startOfToday, differenceInDays } from 'date-fns';
 import { Save, AlertTriangle, User, Lock, Unlock, Flame } from 'lucide-react';
-import { calculatePoints } from '../utils/scoring';
+import { calculatePoints, DEFAULT_RESIDENCY_CONFIG } from '../utils/scoring';
 import { cloudSaveSadhanaLog } from '../services/firebase';
 
 const CORE_ACTIVITIES = [
-  { id: 'mangala_arati', label: 'Maṅgala Ārati (5:00 - 5:30)' },
-  { id: 'japa', label: 'Morning Japa (5:30 - 6:00)' },
-  { id: 'reading', label: 'Book Reading (6:30 - 7:00)' },
-  { id: 'class', label: 'Srimad-Bhagavatam (7:00 - 7:30)' },
+  { id: 'mangala_arati', label: 'Maṅgala Ārati' },
+  { id: 'japa', label: 'Morning Japa' },
+  { id: 'reading', label: 'Book Reading' },
+  { id: 'class', label: 'Srimad-Bhagavatam' },
 ];
 
 const OPTIONAL_ACTIVITIES = [
@@ -29,6 +29,15 @@ const SadhanaTracker = ({ currentUser, prefilledDate }) => {
   const [date, setDate] = useState(prefilledDate || todayStr);
   const [history, setHistory] = useState([]);
   
+  // DYNAMIC CONFIG
+  const residencies = JSON.parse(localStorage.getItem('sadhana_residencies') || '[]');
+  const myRes = residencies.find(r => r.name === currentUser?.residency) || {};
+  const config = myRes.config || DEFAULT_RESIDENCY_CONFIG;
+
+  const activeCore = CORE_ACTIVITIES.filter(act => config[act.id]?.enabled !== false);
+  const activeOptional = OPTIONAL_ACTIVITIES.filter(act => config[act.id]?.enabled !== false);
+  const maxScore = (activeCore.length + activeOptional.length) * 4;
+
   const [activityTimes, setActivityTimes] = useState({
     mangala_arati: '', japa: '', reading: '', class: '', yoga: ''
   });
@@ -62,12 +71,14 @@ const SadhanaTracker = ({ currentUser, prefilledDate }) => {
 
   useEffect(() => {
     let newScore = 0;
-    CORE_ACTIVITIES.forEach(act => {
-      newScore += calculatePoints(act.id, activityTimes[act.id]);
+    activeCore.forEach(act => {
+      newScore += calculatePoints(act.id, activityTimes[act.id], config);
     });
-    newScore += calculatePoints('yoga', activityTimes['yoga']);
-    setScore(Math.min(newScore, 20)); 
-  }, [activityTimes]);
+    activeOptional.forEach(act => {
+      newScore += calculatePoints(act.id, activityTimes[act.id], config);
+    });
+    setScore(Math.min(newScore, maxScore)); 
+  }, [activityTimes, maxScore]);
 
   const loadData = (selectedDate) => {
     const data = JSON.parse(localStorage.getItem(`sadhana_history_${currentUser.email}`) || '[]');
@@ -142,7 +153,7 @@ const SadhanaTracker = ({ currentUser, prefilledDate }) => {
       }
     }
 
-    const hasAbsentCore = isResident && CORE_ACTIVITIES.some(a => !activityTimes[a.id]);
+    const hasAbsentCore = isResident && activeCore.some(a => !activityTimes[a.id]);
     if (hasAbsentCore && !details.absentReason) {
       setErrorMsg('Please provide a reason for the missing core activities.');
       return;
@@ -151,7 +162,7 @@ const SadhanaTracker = ({ currentUser, prefilledDate }) => {
     setErrorMsg('');
     
     const h = JSON.parse(localStorage.getItem(`sadhana_history_${currentUser.email}`) || '[]');
-    const newEntry = { date, activityTimes, details, score };
+    const newEntry = { date, activityTimes, details, score, maxScore };
     
     const existingIndex = h.findIndex(entry => entry.date === date);
     if (existingIndex >= 0) {
@@ -273,7 +284,7 @@ const SadhanaTracker = ({ currentUser, prefilledDate }) => {
             </div>
             
             <div className="score-display">
-              Score: <strong>{score} / 20</strong>
+              Score: <strong>{score} / {maxScore}</strong>
             </div>
           </div>
           
@@ -287,13 +298,14 @@ const SadhanaTracker = ({ currentUser, prefilledDate }) => {
                 </tr>
               </thead>
               <tbody>
-                {CORE_ACTIVITIES.map(activity => {
-                  const currentPts = calculatePoints(activity.id, activityTimes[activity.id]);
+                {activeCore.map(activity => {
+                  const currentPts = calculatePoints(activity.id, activityTimes[activity.id], config);
+                  const targetTime = config[activity.id].time;
                   
                   return (
                     <tr key={activity.id}>
                       <td style={{ fontWeight: '500', color: 'var(--text-main)' }}>
-                        {activity.label}
+                        {activity.label} <span style={{fontSize:'0.75rem', color:'var(--text-muted)'}}>({targetTime})</span>
                       </td>
                       <td>
                         <input 
@@ -320,16 +332,18 @@ const SadhanaTracker = ({ currentUser, prefilledDate }) => {
           </div>
 
           <h3 style={{ margin: '1.5rem 0 1rem', fontSize: '1.1rem' }}>Optional Activities</h3>
-          <div className="table-responsive">
-            <table className="custom-table" style={{ textAlign: 'left' }}>
-              <tbody>
-                {OPTIONAL_ACTIVITIES.map(activity => {
-                  const currentPts = calculatePoints(activity.id, activityTimes[activity.id]);
+          {activeOptional.length > 0 && (
+            <div className="table-responsive">
+              <table className="custom-table" style={{ textAlign: 'left' }}>
+                <tbody>
+                  {activeOptional.map(activity => {
+                    const currentPts = calculatePoints(activity.id, activityTimes[activity.id], config);
+                    const targetTime = config[activity.id].time;
                   
                   return (
                     <tr key={activity.id}>
                       <td style={{ width: '40%', fontWeight: '500', color: 'var(--text-main)' }}>
-                        {activity.label}
+                        {activity.label} <span style={{fontSize:'0.75rem', color:'var(--text-muted)'}}>({targetTime})</span>
                       </td>
                       <td style={{ width: '30%' }}>
                         <input 
@@ -354,8 +368,9 @@ const SadhanaTracker = ({ currentUser, prefilledDate }) => {
               </tbody>
             </table>
           </div>
+          )}
 
-          {currentUser?.status === 'FOLK Resident' && CORE_ACTIVITIES.some(a => !activityTimes[a.id]) && (
+          {currentUser?.status === 'FOLK Resident' && activeCore.some(a => !activityTimes[a.id]) && (
             <div style={{ marginTop: '1.5rem', background: 'rgba(15, 23, 42, 0.8)', padding: '1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-highlight)' }}>
               <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--primary-amber)', display: 'block', marginBottom: '0.5rem' }}>
                 <AlertTriangle size={14} style={{ display: 'inline', marginRight: '4px' }}/> 
