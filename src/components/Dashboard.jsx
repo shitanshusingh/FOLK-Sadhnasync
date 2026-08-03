@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Download, ChevronLeft, ChevronRight, User, AlertCircle, Flame, Target, X, CheckCircle, Clock, Edit3, Activity, Trophy, BookOpen } from 'lucide-react';
-import { format, parseISO, isWithinInterval, subDays, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, isBefore, startOfToday, startOfYear, endOfYear, differenceInMinutes } from 'date-fns';
+import { format, parseISO, isWithinInterval, subDays, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, isBefore, isAfter, differenceInDays, startOfToday, startOfYear, endOfYear, differenceInMinutes } from 'date-fns';
 import { calculatePoints, getAbsentCode } from '../utils/scoring';
 import { generateSadhanaPDFReport } from '../utils/pdfGenerator';
 import { isCloudActive } from '../services/firebase';
@@ -283,6 +283,10 @@ const Dashboard = ({ currentUser, setActiveTab, setPrefilledDate }) => {
 
     const start = startOfMonth(dashboardDate);
     const end = endOfMonth(dashboardDate);
+    const now = new Date();
+    const effectiveEndDate = isAfter(end, now) ? now : end;
+    const totalDays = Math.max(1, differenceInDays(effectiveEndDate, start) + 1);
+    const MAX_POSSIBLE_SCORE = totalDays * 20;
 
     const scoredUsers = allUsers.map(user => {
       const hist = JSON.parse(localStorage.getItem(`sadhana_history_${user.email}`) || '[]');
@@ -293,7 +297,8 @@ const Dashboard = ({ currentUser, setActiveTab, setPrefilledDate }) => {
           totalScore += (entry.score || 0);
         }
       });
-      return { ...user, totalScore };
+      const percentage = Math.round((totalScore / MAX_POSSIBLE_SCORE) * 100);
+      return { ...user, totalScore: percentage };
     });
 
     scoredUsers.sort((a, b) => b.totalScore - a.totalScore);
@@ -798,7 +803,7 @@ const Dashboard = ({ currentUser, setActiveTab, setPrefilledDate }) => {
                     {user.name} {user.email === currentUser.email && '(You)'}
                   </div>
                   <div style={{ fontWeight: 'bold', color: 'var(--primary-amber)', fontSize: '0.9rem' }}>
-                    {user.totalScore}
+                    {user.totalScore}%
                   </div>
                 </div>
               ))}

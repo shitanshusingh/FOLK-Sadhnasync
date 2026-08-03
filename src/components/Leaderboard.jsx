@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Trophy, Medal, Award, Flame, Clock, BookOpen, Star, Target, Gift, Calendar as CalIcon, LogOut, User, Activity, X } from 'lucide-react';
-import { format, startOfMonth, parseISO, isWithinInterval, endOfMonth, differenceInMinutes, differenceInDays, parse, startOfWeek, endOfWeek, startOfDay, endOfDay, startOfQuarter, endOfQuarter, startOfYear, endOfYear } from 'date-fns';
+import { format, startOfMonth, parseISO, isWithinInterval, isAfter, endOfMonth, differenceInMinutes, differenceInDays, parse, startOfWeek, endOfWeek, startOfDay, endOfDay, startOfQuarter, endOfQuarter, startOfYear, endOfYear } from 'date-fns';
 import { calculatePoints } from '../utils/scoring';
 
 
