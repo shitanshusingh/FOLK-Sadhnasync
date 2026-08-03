@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Trophy, Medal, Award, Flame, Clock, BookOpen, Star, Target, Gift, Calendar as CalIcon, LogOut, User, Activity, X } from 'lucide-react';
-import { format, startOfMonth, parseISO, isWithinInterval, isAfter, endOfMonth, differenceInMinutes, differenceInDays, parse, startOfWeek, endOfWeek, startOfDay, endOfDay, startOfQuarter, endOfQuarter, startOfYear, endOfYear } from 'date-fns';
+import { format, startOfMonth, parseISO, isWithinInterval, endOfMonth, differenceInMinutes, differenceInDays, parse, startOfWeek, endOfWeek, startOfDay, endOfDay, startOfQuarter, endOfQuarter, startOfYear, endOfYear } from 'date-fns';
 import { calculatePoints } from '../utils/scoring';
 
 
@@ -136,7 +136,7 @@ const Leaderboard = ({ currentUser }) => {
       const filteredHistory = history.filter(entry => {
         if (!entry.date) return false;
         const entryDate = parseISO(entry.date);
-        return isWithinInterval, isAfter(entryDate, { start: startDate, end: endDate });
+        return isWithinInterval(entryDate, { start: startDate, end: endDate });
       });
 
       let totalScore = 0;
@@ -430,8 +430,8 @@ const Leaderboard = ({ currentUser }) => {
                   <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Clock size={12} /> Wake: {formatWakeup(user.avgWakeupMins)}</span>
                 </div>
               </div>
-              <div style={{ fontWeight: 'bold', color: 'var(--primary-amber)', fontSize: '1.2rem' }}>
-                {user.totalScore}
+              <div style={{ fontWeight: 'bold', color: 'var(--text-main)', fontSize: '1.2rem' }}>
+                {user.totalScore}%
               </div>
             </div>
           );
@@ -440,7 +440,7 @@ const Leaderboard = ({ currentUser }) => {
 
       {/* Sticky Bottom Bar for Current User's Rank */}
       {myRank > 3 && (
-        <div style={{ position: 'fixed', bottom: '80px', left: '1rem', right: '1rem', maxWidth: '468px', margin: '0 auto', background: 'var(--bg-card)', border: '2px solid var(--primary-amber)', borderRadius: '12px', padding: '1rem', display: 'flex', alignItems: 'center', gap: '1rem', boxShadow: '0 -5px 25px rgba(0,0,0,0.3)', zIndex: 9999 }}>
+        <div style={{ position: 'sticky', bottom: '80px', left: '1rem', right: '1rem', maxWidth: '468px', margin: '0 auto', background: 'var(--bg-card)', border: '2px solid var(--primary-amber)', borderRadius: '12px', padding: '1rem', display: 'flex', alignItems: 'center', gap: '1rem', boxShadow: '0 -5px 25px rgba(0,0,0,0.3)', zIndex: 9999 }}>
           <div style={{ fontWeight: 'bold', color: 'var(--primary-amber)', width: '30px', textAlign: 'center' }}>
             #{myRank}
           </div>
@@ -452,7 +452,7 @@ const Leaderboard = ({ currentUser }) => {
             <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Keep pushing! You're doing great.</div>
           </div>
           <div style={{ fontWeight: 'bold', color: 'var(--primary-amber)', fontSize: '1.2rem' }}>
-            {leaderboardData[myRankIndex]?.totalScore || 0}
+            {leaderboardData[myRankIndex]?.totalScore || 0}%
           </div>
         </div>
       )}
