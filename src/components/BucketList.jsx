@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { cloudSaveBucketList } from '../services/firebase';
 import { v4 as uuidv4 } from 'uuid';
 import { Plus, Trash2, CheckCircle, BookOpen, Brain, ListTodo } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
@@ -21,7 +22,7 @@ const BucketList = ({ currentUser }) => {
 
   const saveData = (newData) => {
     setData(newData);
-    localStorage.setItem(`sadhana_bucket_list_${currentUser.email}`, JSON.stringify(newData));
+    cloudSaveBucketList(currentUser.email, newData);
   };
 
   const handleAdd = (e) => {

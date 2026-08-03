@@ -19,6 +19,25 @@ const firebaseConfig = {
 let db = null;
 let isCloudActive = false;
 
+// Helper to handle localStorage quota exceeded errors, specifically for large images in sadhana_users
+export const safeSetItem = (key, value) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (e) {
+    console.warn(`Failed to save ${key} to localStorage (QuotaExceededError). Attempting compression...`, e);
+    // If it's the users array, strip photos to recover session stability
+    if (key === 'sadhana_users' && Array.isArray(value)) {
+      try {
+        const stripped = value.map(u => ({ ...u, photo: null }));
+        localStorage.setItem(key, JSON.stringify(stripped));
+        console.log(`Successfully saved ${key} after stripping photos.`);
+      } catch (e2) {
+        console.error(`Still failed to save ${key} even after stripping photos.`, e2);
+      }
+    }
+  }
+};
+
 try {
   const app = initializeApp(firebaseConfig);
   db = getFirestore(app);
@@ -48,7 +67,7 @@ export const cloudFetchNotifications = async () => {
         cloudNotifs.push(doc.data());
       });
       if (cloudNotifs.length > 0) {
-        localStorage.setItem('sadhana_notifications', JSON.stringify(cloudNotifs));
+        safeSetItem('sadhana_notifications', cloudNotifs);
         return cloudNotifs;
       }
     } catch (e) {
@@ -78,7 +97,7 @@ export const cloudFetchResidencies = async () => {
         cloudRes.push(doc.data());
       });
       if (cloudRes.length > 0) {
-        localStorage.setItem('sadhana_residencies', JSON.stringify(cloudRes));
+        safeSetItem('sadhana_residencies', cloudRes);
         return cloudRes;
       }
     } catch (e) {
@@ -100,7 +119,7 @@ export const cloudSaveUser = async (userObj) => {
   const idx = localUsers.findIndex(u => u.email === userObj.email);
   if (idx >= 0) localUsers[idx] = userObj;
   else localUsers.push(userObj);
-  localStorage.setItem('sadhana_users', JSON.stringify(localUsers));
+  safeSetItem('sadhana_users', localUsers);
 
   // Sync to Firestore Cloud DB
   if (isCloudActive && db) {
@@ -130,7 +149,7 @@ export const cloudFetchAllUsers = async () => {
             merged.push(lu);
           }
         });
-        localStorage.setItem('sadhana_users', JSON.stringify(merged));
+        safeSetItem('sadhana_users', merged);
         return merged;
       }
     } catch (e) {
@@ -151,7 +170,7 @@ export const cloudSaveSadhanaLog = async (email, logEntry) => {
   const idx = history.findIndex(h => h.date === logEntry.date);
   if (idx >= 0) history[idx] = logEntry;
   else history.push(logEntry);
-  localStorage.setItem(historyKey, JSON.stringify(history));
+  safeSetItem(historyKey, history);
 
   // Sync to Firestore Cloud DB
   if (isCloudActive && db) {
@@ -178,7 +197,7 @@ export const cloudFetchSadhanaHistory = async (email) => {
         cloudHistory.push(data);
       });
       if (cloudHistory.length > 0) {
-        localStorage.setItem(`sadhana_history_${email}`, JSON.stringify(cloudHistory));
+        safeSetItem(`sadhana_history_${email}`, cloudHistory);
         return cloudHistory;
       }
     } catch (e) {
@@ -209,7 +228,7 @@ export const cloudFetchAllSadhanaHistories = async () => {
       const updatedEmails = Object.keys(groupedHistory);
       if (updatedEmails.length > 0) {
         updatedEmails.forEach(email => {
-          localStorage.setItem(`sadhana_history_${email}`, JSON.stringify(groupedHistory[email]));
+          safeSetItem(`sadhana_history_${email}`, groupedHistory[email]);
         });
         
         // Dispatch an event so components like GuideDashboard know data has been refreshed
@@ -231,7 +250,7 @@ export const cloudSaveCampaign = async (campaignObj) => {
   const idx = globalCamps.findIndex(c => c.id === campaignObj.id);
   if (idx >= 0) globalCamps[idx] = campaignObj;
   else globalCamps.push(campaignObj);
-  localStorage.setItem('sadhana_campaigns', JSON.stringify(globalCamps));
+  safeSetItem('sadhana_campaigns', globalCamps);
 
   if (campaignObj.guideEmail) {
     const key = `guide_campaigns_${campaignObj.guideEmail}`;
@@ -239,7 +258,7 @@ export const cloudSaveCampaign = async (campaignObj) => {
     const gIdx = myCamps.findIndex(c => c.id === campaignObj.id);
     if (gIdx >= 0) myCamps[gIdx] = campaignObj;
     else myCamps.push(campaignObj);
-    localStorage.setItem(key, JSON.stringify(myCamps));
+    safeSetItem(key, myCamps);
   }
 
   // Cloud Sync
@@ -262,7 +281,7 @@ export const cloudFetchCampaigns = async () => {
         cloudCamps.push(doc.data());
       });
       if (cloudCamps.length > 0) {
-        localStorage.setItem('sadhana_campaigns', JSON.stringify(cloudCamps));
+        safeSetItem('sadhana_campaigns', cloudCamps);
         return cloudCamps;
       }
     } catch (e) {
@@ -271,7 +290,6 @@ export const cloudFetchCampaigns = async () => {
   }
   return JSON.parse(localStorage.getItem('sadhana_campaigns') || '[]');
 };
-
 // 4. Real-Time Listener Hook for Live Smartphone Sync
 export const subscribeToCloudUpdates = (collectionName, onUpdate) => {
   if (!isCloudActive || !db) return () => {};
@@ -287,3 +305,41 @@ export const subscribeToCloudUpdates = (collectionName, onUpdate) => {
     return () => {};
   }
 };
+// 9. Bucket List Sync
+export const cloudSaveBucketList = async (email, goals) => {
+  if (!email || !goals) return;
+  const key = `sadhana_bucket_list_${email}`;
+  safeSetItem(key, goals);
+
+  if (isCloudActive && db) {
+    try {
+      const docRef = doc(db, 'bucket_lists', email);
+      await setDoc(docRef, { email, goals });
+    } catch (e) {
+      console.warn("Failed to cloud save bucket list:", e);
+    }
+  }
+};
+
+export const cloudFetchAllBucketLists = async () => {
+  if (isCloudActive && db) {
+    try {
+      const querySnapshot = await getDocs(collection(db, 'bucket_lists'));
+      const allLists = [];
+      querySnapshot.forEach((doc) => {
+        allLists.push(doc.data());
+      });
+      if (allLists.length > 0) {
+        allLists.forEach(list => {
+          safeSetItem(`sadhana_bucket_list_${list.email}`, list.goals);
+        });
+        window.dispatchEvent(new Event('sadhana_bucket_sync'));
+        return allLists;
+      }
+    } catch (e) {
+      console.warn("Failed to fetch bucket lists:", e);
+    }
+  }
+};
+
+// EOF

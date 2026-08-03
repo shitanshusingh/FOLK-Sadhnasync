@@ -76,15 +76,31 @@ const SignUp = ({ onAuthSuccess }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData.entries());
+    
+    // Custom Validation to display error at bottom
+    const missingFields = [];
+    if (!data.name) missingFields.push('Name');
+    if (!data.email) missingFields.push('Email');
+    if (!data.phone) missingFields.push('Phone');
+    if (!data.password) missingFields.push('Password');
+    if (!data.role) missingFields.push('Role');
+    if (data.role === 'devotee' && !data.guide) missingFields.push('Folk Guide');
+    if (data.role === 'devotee' && !data.residency) missingFields.push('Residency');
+    if (!data.securityQuestion) missingFields.push('Security Question');
+    if (!data.securityAnswer) missingFields.push('Security Answer');
+    
+    if (missingFields.length > 0) {
+      setError(`Please fill all mandatory fields: ${missingFields.join(', ')}`);
+      return;
+    }
+    
     if (!photoBase64) {
       setError('Please upload a profile photo (Mandatory)');
       return;
     }
     setError('');
-
-    const formData = new FormData(e.target);
-    const data = Object.fromEntries(formData.entries());
-    data.photo = photoBase64;
     
     // Convert specified fields to uppercase automatically
     if (data.college) data.college = data.college.toUpperCase();
@@ -153,7 +169,7 @@ const SignUp = ({ onAuthSuccess }) => {
   const labelStyle = { display: 'block', marginBottom: '0.4rem', color: '#94a3b8', fontSize: '0.85rem', fontWeight: '500' };
 
   return (
-    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem', maxHeight: '55vh', overflowY: 'auto', paddingRight: '10px' }}>
+    <form onSubmit={handleSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem', maxHeight: '55vh', overflowY: 'auto', paddingRight: '10px' }}>
       
       {/* Photo Upload */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>

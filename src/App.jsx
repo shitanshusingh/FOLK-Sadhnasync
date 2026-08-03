@@ -15,7 +15,7 @@ import GuideDashboard from './components/GuideDashboard';
 import { subDays, format } from 'date-fns';
 import { calculatePoints } from './utils/scoring';
 import {
-  cloudFetchAllUsers, cloudSaveUser, cloudFetchCampaigns, subscribeToCloudUpdates, cloudFetchNotifications, cloudFetchResidencies, cloudSaveResidency, cloudFetchAllSadhanaHistories
+  cloudFetchAllUsers, cloudSaveUser, cloudFetchCampaigns, subscribeToCloudUpdates, cloudFetchNotifications, cloudFetchResidencies, cloudSaveResidency, cloudFetchAllSadhanaHistories, safeSetItem, cloudFetchAllBucketLists
 } from './services/firebase';
 import { isCloudActive } from './services/firebase';
 
@@ -70,21 +70,46 @@ function App() {
         localUsers.forEach(lu => {
           if (!merged.find(u => u.email === lu.email)) merged.push(lu);
         });
-        localStorage.setItem('sadhana_users', JSON.stringify(merged));
+        safeSetItem('sadhana_users', merged);
         window.dispatchEvent(new Event('sadhana_live_sync'));
       }
     });
 
     const unsubNotifs = subscribeToCloudUpdates('notifications', (cloudNotifs) => {
       if (cloudNotifs && cloudNotifs.length > 0) {
-        localStorage.setItem('sadhana_notifications', JSON.stringify(cloudNotifs));
+        safeSetItem('sadhana_notifications', cloudNotifs);
         window.dispatchEvent(new Event('sadhana_live_sync'));
+      }
+    });
+
+    const unsubHistory = subscribeToCloudUpdates('sadhana_history', (cloudHistory) => {
+      if (cloudHistory && cloudHistory.length > 0) {
+        const groupedHistory = {};
+        cloudHistory.forEach(data => {
+          if (!groupedHistory[data.email]) groupedHistory[data.email] = [];
+          groupedHistory[data.email].push(data);
+        });
+        Object.keys(groupedHistory).forEach(email => {
+          safeSetItem(`sadhana_history_${email}`, groupedHistory[email]);
+        });
+        window.dispatchEvent(new Event('sadhana_history_synced'));
+      }
+    });
+
+    const unsubBucketLists = subscribeToCloudUpdates('bucket_lists', (cloudBucketLists) => {
+      if (cloudBucketLists && cloudBucketLists.length > 0) {
+        cloudBucketLists.forEach(list => {
+          safeSetItem(`sadhana_bucket_list_${list.email}`, list.goals);
+        });
+        window.dispatchEvent(new Event('sadhana_bucket_sync'));
       }
     });
 
     return () => {
       unsubUsers();
       unsubNotifs();
+      unsubHistory();
+      unsubBucketLists();
     };
   }, []);
 
@@ -100,7 +125,7 @@ function App() {
         password: 'admin',
         role: 'admin'
       });
-      localStorage.setItem('sadhana_users', JSON.stringify(allUsers));
+      safeSetItem('sadhana_users', allUsers);
     }
   }, []);
 
@@ -184,7 +209,7 @@ function App() {
 
   const handleLogin = (user) => {
     setCurrentUser(user);
-    localStorage.setItem('sadhana_current_user', JSON.stringify(user));
+    safeSetItem('sadhana_current_user', user);
     // ☁️ Sync user profile to Cloud DB on every login/registration
     cloudSaveUser(user);
   };
@@ -200,7 +225,7 @@ function App() {
     if (notifications.length > 0) {
       const newCleared = [...clearedNotifs, ...notifications.map(n => n.id)];
       setClearedNotifs(newCleared);
-      localStorage.setItem('sadhana_cleared_notifs', JSON.stringify(newCleared));
+      safeSetItem('sadhana_cleared_notifs', newCleared);
     }
   };
 
@@ -485,7 +510,7 @@ function App() {
       {showNotifications && (
         <>
           <div onClick={() => setShowNotifications(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9998 }} />
-          <div onClick={e => e.stopPropagation()} className="animate-fade-in" style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '90vw', maxWidth: '350px', background: 'var(--bg-card)', border: '1px solid var(--border-highlight)', borderRadius: '16px', padding: '1.2rem', boxShadow: '0 15px 35px rgba(0,0,0,0.7)', zIndex: 9999, display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: '80vh', overflowY: 'auto' }}>
+          <div onClick={e => e.stopPropagation()} className="animate-fade-in" style={{ position: 'fixed', top: '60px', right: '10px', left: 'auto', width: '90vw', maxWidth: '350px', background: 'var(--bg-card)', border: '1px solid var(--border-highlight)', borderRadius: '16px', padding: '1.2rem', boxShadow: '0 15px 35px rgba(0,0,0,0.7)', zIndex: 9999, display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: '80vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.5rem' }}>
               <h4 style={{ margin: 0, color: 'var(--text-main)' }}>Notifications</h4>
               <div style={{ display: 'flex', gap: '10px' }}>

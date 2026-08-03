@@ -155,13 +155,21 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
     if (!hist.length) return { avg: 0, streak: 0, total: 0, last7: 0, trend: 'stable' };
     const sorted = [...hist].sort((a, b) => b.date.localeCompare(a.date));
     
-    // Calculate average for CURRENT month only
-    const currentMonthPrefix = format(new Date(), 'yyyy-MM');
+    // Calculate average for CURRENT month
+    const now = new Date();
+    const currentMonthPrefix = format(now, 'yyyy-MM');
     const thisMonthHist = hist.filter(h => h.date.startsWith(currentMonthPrefix));
     
-    let sumScore = 0; let sumMax = 0;
-    thisMonthHist.forEach(h => { sumScore += (h.score || 0); sumMax += (h.maxScore || 20); });
-    const avg = sumMax > 0 ? Math.round((sumScore / sumMax) * 20) : 0;
+    // Dynamically limit max days to the current day of the month (so people aren't penalized for future days)
+    const elapsedDays = now.getDate();
+    
+    let sumNormalizedScore = 0;
+    thisMonthHist.forEach(h => { 
+      const maxS = h.maxScore || 20;
+      let normS = maxS > 0 ? (h.score / maxS) * 20 : 0;
+      sumNormalizedScore += normS; 
+    });
+    const avg = Math.min(100, Math.round((sumNormalizedScore / (elapsedDays * 20)) * 100));
     
     let last7Score = 0; let last7Max = 0;
     sorted.slice(0, 7).forEach(h => { last7Score += (h.score || 0); last7Max += (h.maxScore || 20); });
@@ -247,7 +255,7 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
         remark: bucketItemRemark || `Assigned by ${currentUser.name} (Priority)`
       });
       goals[bucketCategory] = list;
-      localStorage.setItem(bucketKey, JSON.stringify(goals));
+      cloudSaveBucketList(dev.email, goals);
     });
 
     setBucketItemTitle('');
@@ -1011,7 +1019,7 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
                                   <div style={{ fontSize: '0.7rem', color: '#64748b' }}>{d.status} {d.residency && `· ${d.residency}`}</div>
                                 </div>
                                 <div style={{ textAlign: 'right' }}>
-                                  <div style={{ fontWeight: '800', fontSize: '0.9rem', color: SCORE_COLOR(d.avg) }}>{d.avg}/20 pts</div>
+                                  <div style={{ fontWeight: '800', fontSize: '0.9rem', color: SCORE_COLOR(d.avg) }}>{d.avg}%</div>
                                   <div style={{ fontSize: '0.68rem', color: '#3b82f6' }}>🔥 {d.streak}d streak</div>
                                 </div>
                               </div>

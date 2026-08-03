@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Trophy, Medal, Award, Flame, Clock, BookOpen, Star, Target, Gift, Calendar as CalIcon, LogOut, User, Activity, X } from 'lucide-react';
-import { format, startOfMonth, parseISO, isWithinInterval, endOfMonth, differenceInMinutes, parse, startOfWeek, endOfWeek, startOfDay, endOfDay, startOfQuarter, endOfQuarter, startOfYear, endOfYear } from 'date-fns';
+import { format, startOfMonth, parseISO, isWithinInterval, isAfter, endOfMonth, differenceInMinutes, differenceInDays, parse, startOfWeek, endOfWeek, startOfDay, endOfDay, startOfQuarter, endOfQuarter, startOfYear, endOfYear } from 'date-fns';
 import { calculatePoints } from '../utils/scoring';
 
 
@@ -125,6 +125,10 @@ const Leaderboard = ({ currentUser }) => {
       if (!targetUsers.length) targetUsers = allUsers; // fallback if no dummy enrolled
     }
 
+    // Calculate total days for Percentage ranking, capped to today so users aren't penalized for future days
+    const effectiveEndDate = isAfter(endDate, now) ? now : endDate;
+    const totalDays = Math.max(1, differenceInDays(effectiveEndDate, startDate) + 1);
+
     const scoredUsers = targetUsers.map(user => {
       const historyStr = localStorage.getItem(`sadhana_history_${user.email}`);
       const history = historyStr ? JSON.parse(historyStr) : [];
@@ -132,7 +136,7 @@ const Leaderboard = ({ currentUser }) => {
       const filteredHistory = history.filter(entry => {
         if (!entry.date) return false;
         const entryDate = parseISO(entry.date);
-        return isWithinInterval(entryDate, { start: startDate, end: endDate });
+        return isWithinInterval, isAfter(entryDate, { start: startDate, end: endDate });
       });
 
       let totalScore = 0;
@@ -169,9 +173,11 @@ const Leaderboard = ({ currentUser }) => {
         ? Math.round(wakeupTimesMins.reduce((a, b) => a + b, 0) / wakeupTimesMins.length)
         : 9999;
 
+      const percentage = Math.min(100, Math.round((totalScore / (totalDays * 20)) * 100));
+
       return {
         ...user,
-        totalScore: Math.round(totalScore),
+        totalScore: percentage,
         totalReading,
         totalHearing,
         avgWakeupMins
@@ -346,7 +352,7 @@ const Leaderboard = ({ currentUser }) => {
               <div style={{ background: 'linear-gradient(180deg, #e2e8f0 0%, #cbd5e1 100%)', width: '100%', height: '100px', borderTopLeftRadius: '12px', borderTopRightRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '25px', boxShadow: '0 -5px 15px rgba(0,0,0,0.1)' }}>
                 <span style={{ fontWeight: 'bold', color: '#334155', fontSize: '1.2rem' }}>2</span>
                 <span style={{ fontSize: '0.8rem', color: '#475569', textAlign: 'center', padding: '0 5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>{top3[1].name.split(' ')[0]}</span>
-                <span style={{ fontWeight: 'bold', color: '#1e293b', marginTop: '5px' }}>{top3[1].totalScore} pts</span>
+                <span style={{ fontWeight: 'bold', color: '#1e293b', marginTop: '5px' }}>{top3[1].totalScore} %</span>
               </div>
             </div>
           )}
@@ -364,7 +370,7 @@ const Leaderboard = ({ currentUser }) => {
             <div style={{ background: 'linear-gradient(180deg, #fde68a 0%, #fbbf24 100%)', width: '100%', height: '130px', borderTopLeftRadius: '12px', borderTopRightRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '30px', boxShadow: '0 -5px 20px rgba(251, 191, 36, 0.4)' }}>
               <span style={{ fontWeight: 'bold', color: '#78350f', fontSize: '1.5rem' }}>1</span>
               <span style={{ fontSize: '0.9rem', color: '#92400e', textAlign: 'center', padding: '0 5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>{top3[0].name.split(' ')[0]}</span>
-              <span style={{ fontWeight: 'bold', color: '#451a03', marginTop: '5px' }}>{top3[0].totalScore} pts</span>
+              <span style={{ fontWeight: 'bold', color: '#451a03', marginTop: '5px' }}>{top3[0].totalScore} %</span>
             </div>
           </div>
 
@@ -382,7 +388,7 @@ const Leaderboard = ({ currentUser }) => {
               <div style={{ background: 'linear-gradient(180deg, #fcd34d 0%, #d97706 100%)', width: '100%', height: '80px', borderTopLeftRadius: '12px', borderTopRightRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '20px', boxShadow: '0 -5px 15px rgba(0,0,0,0.1)' }}>
                 <span style={{ fontWeight: 'bold', color: '#78350f', fontSize: '1.2rem' }}>3</span>
                 <span style={{ fontSize: '0.8rem', color: '#78350f', textAlign: 'center', padding: '0 5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>{top3[2].name.split(' ')[0]}</span>
-                <span style={{ fontWeight: 'bold', color: '#451a03', marginTop: '5px' }}>{top3[2].totalScore} pts</span>
+                <span style={{ fontWeight: 'bold', color: '#451a03', marginTop: '5px' }}>{top3[2].totalScore} %</span>
               </div>
             </div>
           )}
@@ -471,8 +477,8 @@ const Leaderboard = ({ currentUser }) => {
             
             <div style={{ background: 'var(--bg-input)', borderRadius: '12px', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>
-                <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}><Trophy size={16} /> Total Score</span>
-                <span style={{ fontWeight: '800', color: 'var(--primary-amber)' }}>{selectedDevotee.totalScore} pts</span>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}><Trophy size={16} /> Average</span>
+                <span style={{ fontWeight: '800', color: 'var(--primary-amber)' }}>{selectedDevotee.totalScore} %</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>
                 <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}><BookOpen size={16} /> Total Reading</span>
