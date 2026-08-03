@@ -34,6 +34,14 @@ export const safeSetItem = (key, value) => {
       } catch (e2) {
         console.error(`Still failed to save ${key} even after stripping photos.`, e2);
       }
+    } else if (value && typeof value === 'object' && value.photo) {
+      try {
+        const stripped = { ...value, photo: null };
+        localStorage.setItem(key, JSON.stringify(stripped));
+        console.log(`Successfully saved ${key} after stripping photo.`);
+      } catch (e2) {
+        console.error(`Still failed to save ${key} even after stripping photo.`, e2);
+      }
     }
   }
 };
