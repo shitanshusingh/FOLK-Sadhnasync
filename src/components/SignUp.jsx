@@ -84,10 +84,9 @@ const SignUp = ({ onAuthSuccess }) => {
     if (!data.name) missingFields.push('Name');
     if (!data.email) missingFields.push('Email');
     if (!data.phone) missingFields.push('Phone');
-    if (!data.password) missingFields.push('Password');
-    if (!data.role) missingFields.push('Role');
-    if (data.role === 'devotee' && !data.guide) missingFields.push('Folk Guide');
-    if (data.role === 'devotee' && !data.residency) missingFields.push('Residency');
+    data.role = 'devotee';
+    if (!data.guide) missingFields.push('Folk Guide');
+    if (data.status === 'FOLK Resident' && !data.residency) missingFields.push('Residency');
     if (!data.securityQuestion) missingFields.push('Security Question');
     if (!data.securityAnswer) missingFields.push('Security Answer');
     
