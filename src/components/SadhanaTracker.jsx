@@ -265,15 +265,7 @@ const SadhanaTracker = ({ currentUser, prefilledDate }) => {
         })}
       </div>
       
-      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
-        <input 
-          type="date" 
-          value={date} 
-          onChange={(e) => setDate(e.target.value)} 
-          max={new Date().toISOString().split('T')[0]} 
-          style={{ padding: '0.5rem', borderRadius: '8px', background: 'var(--bg-main)', color: 'var(--text-main)', border: '1px solid var(--border-subtle)' }}
-        />
-      </div>
+
 
       {isLocked && !unlockRequested && (
         <div style={{ padding: '1.5rem', background: 'rgba(244, 63, 94, 0.1)', border: '1px solid rgba(244, 63, 94, 0.3)', borderRadius: 'var(--radius-sm)', color: 'var(--accent-rose)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
@@ -301,9 +293,28 @@ const SadhanaTracker = ({ currentUser, prefilledDate }) => {
                 Leave the time blank if you were absent. PM times are not accepted here.
               </p>
             </div>
-            
-            <div className="score-display">
-              Score: <strong>{score} / {maxScore}</strong>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <label style={{ margin: 0, fontSize: '0.85rem', fontWeight: 'bold' }}>In Temple Today?</label>
+                <div 
+                  onClick={() => setDetails({...details, inTemple: !details.inTemple})}
+                  style={{ 
+                    width: '40px', height: '20px', borderRadius: '10px', 
+                    background: details.inTemple ? 'var(--primary-amber)' : 'var(--bg-main)', 
+                    position: 'relative', cursor: 'pointer', transition: 'background 0.3s',
+                    border: '1px solid var(--border-highlight)'
+                  }}
+                >
+                  <div style={{ 
+                    width: '16px', height: '16px', borderRadius: '50%', background: '#fff', 
+                    position: 'absolute', top: '1px', left: details.inTemple ? '21px' : '1px', 
+                    transition: 'left 0.3s', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' 
+                  }} />
+                </div>
+              </div>
+              <div className="score-display">
+                Score: <strong>{score} / {maxScore}</strong>
+              </div>
             </div>
           </div>
           
@@ -449,27 +460,8 @@ const SadhanaTracker = ({ currentUser, prefilledDate }) => {
               <label>Total Hearing (Mins) <span style={{color: 'var(--accent-rose)'}}>*</span></label>
               <input type="number" className="form-control" min="0" placeholder="e.g. 30" value={details.hearingDuration || ''} onChange={(e) => setDetails({...details, hearingDuration: e.target.value})} required />
             </div>
-            
-            <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '1.5rem' }}>
-              <label style={{ margin: 0 }}>In Temple Today?</label>
-              <div 
-                onClick={() => setDetails({...details, inTemple: !details.inTemple})}
-                style={{ 
-                  width: '50px', height: '26px', borderRadius: '13px', 
-                  background: details.inTemple ? 'var(--primary-amber)' : 'var(--bg-main)', 
-                  position: 'relative', cursor: 'pointer', transition: 'background 0.3s' 
-                }}
-              >
-                <div style={{ 
-                  width: '22px', height: '22px', borderRadius: '50%', background: '#fff', 
-                  position: 'absolute', top: '2px', left: details.inTemple ? '26px' : '2px', 
-                  transition: 'left 0.3s', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' 
-                }} />
-              </div>
             </div>
           </div>
-        </div>
-
         {errorMsg && (
           <div style={{ color: 'var(--accent-rose)', fontWeight: '600', textAlign: 'right', marginBottom: '1rem' }}>
             {errorMsg}

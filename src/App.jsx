@@ -411,7 +411,7 @@ function App() {
             </div>
 
             {/* User Profile Button */}
-            <button className="nav-btn btn-secondary" style={{ padding: '0.4rem', borderRadius: '50%', overflow: 'hidden', border: impersonatingUser ? '2px solid #ef4444' : 'none' }} onClick={() => setShowProfile(true)}>
+            <button className="nav-btn btn-secondary header-profile-btn" style={{ padding: '0.4rem', borderRadius: '50%', overflow: 'hidden', border: impersonatingUser ? '2px solid #ef4444' : 'none' }} onClick={() => setShowProfile(true)}>
               {activeUser.photo ? (
                 <img src={activeUser.photo} alt="Profile" style={{ width: '28px', height: '28px', objectFit: 'cover', borderRadius: '50%' }} />
               ) : (
@@ -548,7 +548,7 @@ function App() {
 
       {/* Profile Modal */}
       {showProfile && (
-        <Profile user={currentUser} onClose={() => setShowProfile(false)} onLogout={handleLogout} />
+        <Profile user={currentUser} onClose={() => setShowProfile(false)} onLogout={handleLogout} onUpdateUser={setCurrentUser} />
       )}
     </div>
   );

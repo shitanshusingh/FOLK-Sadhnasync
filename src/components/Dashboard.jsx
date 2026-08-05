@@ -21,41 +21,7 @@ const Dashboard = ({ currentUser, setActiveTab, setPrefilledDate }) => {
   const [includeGraphInPdf, setIncludeGraphInPdf] = useState(true);
   const chartRef = useRef(null);
 
-  const [showProfileModal, setShowProfileModal] = useState(false);
-  const [profileData, setProfileData] = useState({ name: currentUser?.name || '', phone: currentUser?.phone || '', photo: currentUser?.photo || '' });
-  const handleProfileImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { alert("File exceeds 5MB limit!"); return; }
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 300; const MAX_HEIGHT = 300;
-        let width = img.width; let height = img.height;
-        if (width > height) { if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; } }
-        else { if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; } }
-        canvas.width = width; canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
-        setProfileData(prev => ({ ...prev, photo: dataUrl }));
-      };
-      img.src = event.target.result;
-    };
-    reader.readAsDataURL(file);
-  };
-  const saveProfile = () => {
-    const updatedUser = { ...currentUser, ...profileData };
-    localStorage.setItem('sadhana_current_user', JSON.stringify(updatedUser));
-    const allUsers = JSON.parse(localStorage.getItem('sadhana_users') || '[]');
-    const newUsers = allUsers.map(u => u.email === updatedUser.email ? updatedUser : u);
-    localStorage.setItem('sadhana_users', JSON.stringify(newUsers));
-    cloudSaveUser(updatedUser);
-    setShowProfileModal(false);
-    window.location.reload();
-  };
+
   const [showPhotoPrompt, setShowPhotoPrompt] = useState(false);
   useEffect(() => {
     if (!currentUser?.photo && !sessionStorage.getItem('sadhana_photo_prompted')) {
@@ -692,35 +658,6 @@ const Dashboard = ({ currentUser, setActiveTab, setPrefilledDate }) => {
 
   return (
     <div className="animate-fade-in" style={{ paddingBottom: '4rem', maxWidth: '1050px', margin: '0 auto', position: 'relative' }}>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: '15px', padding: '1.5rem', background: 'var(--bg-card)', borderRadius: '16px', marginBottom: '1.5rem', border: '1px solid var(--border-highlight)' }}>
-        <div style={{ width: '80px', height: '80px', borderRadius: '50%', overflow: 'hidden', border: '3px solid var(--primary-amber)' }}>
-          {currentUser?.photo ? <img src={currentUser.photo} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <User size={40} style={{ margin: '20px' }} />}
-        </div>
-        <div style={{ flex: 1 }}>
-          <h2 style={{ margin: 0, color: 'var(--text-main)' }}>{currentUser?.name}</h2>
-          <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '8px' }}>ID: {currentUser?.userId || currentUser?.email}</div>
-          <button className="nav-btn btn-secondary" onClick={() => setShowProfileModal(true)} style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>
-            <Edit3 size={14} style={{ marginRight: '5px', display: 'inline-block', verticalAlign: 'middle' }} /> Edit Profile
-          </button>
-        </div>
-      </div>
-
-      {showPhotoPrompt && typeof document !== 'undefined' && createPortal(
-        <div style={{ position: 'fixed', inset: 0, zIndex: 999999, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div className="animate-fade-in" style={{ background: 'var(--bg-card)', padding: '2rem', borderRadius: '16px', width: '90%', maxWidth: '400px', border: '1px solid var(--accent-emerald)', textAlign: 'center', boxShadow: '0 10px 25px rgba(0,0,0,0.5)' }}>
-            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📸</div>
-            <h3 style={{ margin: '0 0 1rem 0', color: 'var(--text-main)', fontSize: '1.5rem' }}>Profile Photo Missing!</h3>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', marginBottom: '1.5rem', lineHeight: '1.5' }}>
-              Your profile picture is currently blank on the Leaderboard. Please take a moment to upload a new one!
-            </p>
-            <div style={{ display: 'flex', gap: '1rem' }}>
-              <button onClick={() => setShowPhotoPrompt(false)} style={{ flex: 1, padding: '0.8rem', borderRadius: '8px', cursor: 'pointer', border: '1px solid var(--border-highlight)', background: 'transparent', color: 'var(--text-muted)' }}>Maybe Later</button>
-              <button onClick={() => { setShowPhotoPrompt(false); setShowProfileModal(true); }} style={{ flex: 1, padding: '0.8rem', borderRadius: '8px', cursor: 'pointer', border: 'none', background: 'var(--primary-amber)', color: '#fff', fontWeight: 'bold' }}>Upload Now</button>
-            </div>
-          </div>
-        </div>
-      , document.body)}
 
       {/* WhatsApp Style Sadhana Status Feed */}
       {todayFeedUsers.length > 0 && (
@@ -1529,28 +1466,6 @@ const Dashboard = ({ currentUser, setActiveTab, setPrefilledDate }) => {
           document.body
         );
       })()}
-
-      {showProfileModal && typeof document !== 'undefined' && createPortal(
-        <div style={{ position: 'fixed', inset: 0, zIndex: 99999, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: 'var(--bg-card)', padding: '2rem', borderRadius: '16px', width: '100%', maxWidth: '400px', border: '1px solid var(--border-highlight)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-              <h3 style={{ margin: 0 }}>Edit Profile</h3>
-              <button onClick={() => setShowProfileModal(false)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer' }}><X size={20} /></button>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div style={{ textAlign: 'center' }}>
-                {profileData.photo && <img src={profileData.photo} alt="Preview" style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover', marginBottom: '10px' }} />}
-                <input type="file" accept="image/*" onChange={handleProfileImageUpload} className="form-control" />
-                <small style={{ color: 'var(--text-muted)', display: 'block', marginTop: '5px' }}>Max 5MB. Will be compressed automatically.</small>
-              </div>
-              <input type="text" value={profileData.name} onChange={e => setProfileData({...profileData, name: e.target.value})} className="form-control" placeholder="Name" />
-              <input type="text" value={profileData.phone} onChange={e => setProfileData({...profileData, phone: e.target.value})} className="form-control" placeholder="Phone" />
-              <button className="nav-btn btn-primary" onClick={saveProfile} style={{ padding: '0.8rem', width: '100%', justifyContent: 'center', marginTop: '1rem' }}>Save Changes</button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
       
       {showNotificationsModal && activeNotification && typeof document !== 'undefined' && createPortal(
         <div style={{ position: 'fixed', inset: 0, zIndex: 99999, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
