@@ -160,12 +160,21 @@ const Leaderboard = ({ currentUser }) => {
         }
 
         totalScore += entryScore;
-        totalReading += (entry.details?.readingDuration || 0);
-        totalHearing += (entry.details?.hearingDuration || 0);
+        totalReading += Number(entry.details?.readingDuration || 0);
+        totalHearing += Number(entry.details?.hearingDuration || 0);
         
         if (entry.details?.wakeupTime) {
-          const [h, m] = entry.details.wakeupTime.split(':').map(Number);
-          if (!isNaN(h) && !isNaN(m)) wakeupTimesMins.push(h * 60 + m);
+          let timeStr = String(entry.details.wakeupTime);
+          let isPM = timeStr.toLowerCase().includes('pm');
+          let isAM = timeStr.toLowerCase().includes('am');
+          let timePart = timeStr.replace(/[^\d:]/g, '');
+          let [h, m] = timePart.split(':').map(Number);
+          
+          if (!isNaN(h) && !isNaN(m)) {
+             if (isPM && h < 12) h += 12;
+             if (isAM && h === 12) h = 0;
+             wakeupTimesMins.push(h * 60 + m);
+          }
         }
       });
 
@@ -173,13 +182,14 @@ const Leaderboard = ({ currentUser }) => {
         ? Math.round(wakeupTimesMins.reduce((a, b) => a + b, 0) / wakeupTimesMins.length)
         : 9999;
 
+      const totalDaysActive = Math.max(1, filteredHistory.length);
       const percentage = Math.min(100, Math.round((totalScore / (totalDays * 20)) * 100));
 
       return {
         ...user,
         totalScore: percentage,
-        totalReading,
-        totalHearing,
+        totalReading: Math.round(totalReading / totalDaysActive),
+        totalHearing: Math.round(totalHearing / totalDaysActive),
         avgWakeupMins
       };
     });
@@ -425,8 +435,9 @@ const Leaderboard = ({ currentUser }) => {
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 'bold', color: 'var(--text-main)' }}>{user.name} {isMe && '(You)'}</div>
-                <div style={{ display: 'flex', gap: '10px', fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><BookOpen size={12} /> {user.totalReading}m</span>
+                <div style={{ display: 'flex', gap: '10px', fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px', flexWrap: 'wrap' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><BookOpen size={12} /> {user.totalReading} mins/day</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Activity size={12} /> {user.totalHearing} mins/day</span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Clock size={12} /> Wake: {formatWakeup(user.avgWakeupMins)}</span>
                 </div>
               </div>
@@ -481,12 +492,12 @@ const Leaderboard = ({ currentUser }) => {
                 <span style={{ fontWeight: '800', color: 'var(--primary-amber)' }}>{selectedDevotee.totalScore} %</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>
-                <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}><BookOpen size={16} /> Total Reading</span>
-                <span style={{ fontWeight: '800', color: '#3b82f6' }}>{selectedDevotee.totalReading} mins</span>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}><BookOpen size={16} /> Avg Reading</span>
+                <span style={{ fontWeight: '800', color: '#3b82f6' }}>{selectedDevotee.totalReading} mins/day</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>
-                <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}><Activity size={16} /> Total Hearing</span>
-                <span style={{ fontWeight: '800', color: '#10b981' }}>{selectedDevotee.totalHearing} mins</span>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}><Activity size={16} /> Avg Hearing</span>
+                <span style={{ fontWeight: '800', color: '#10b981' }}>{selectedDevotee.totalHearing} mins/day</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}><Clock size={16} /> Avg Wakeup</span>

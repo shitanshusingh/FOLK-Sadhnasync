@@ -37,12 +37,16 @@ const SignUp = ({ onAuthSuccess }) => {
   const handlePhotoUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert("File size exceeds 5MB limit. Please choose a smaller file.");
+        return;
+      }
       const reader = new FileReader();
       reader.onloadend = () => {
         const img = new Image();
         img.onload = () => {
           const canvas = document.createElement('canvas');
-          const MAX_SIZE = 250;
+          const MAX_SIZE = 150;
           let width = img.width;
           let height = img.height;
 
@@ -64,7 +68,7 @@ const SignUp = ({ onAuthSuccess }) => {
           ctx.drawImage(img, 0, 0, width, height);
           
           // Compress as JPEG
-          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.6);
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.2);
           setPhotoPreview(compressedBase64);
           setPhotoBase64(compressedBase64);
         };

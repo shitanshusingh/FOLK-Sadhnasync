@@ -43,7 +43,7 @@ const SadhanaTracker = ({ currentUser, prefilledDate }) => {
   });
   
   const [details, setDetails] = useState({
-    sleepTime: '', wakeupTime: '', totalRounds: '', chantingCompletionTime: '', readingDuration: '', absentReason: '', bookName: '', hearingDuration: ''
+    sleepTime: '', wakeupTime: '', totalRounds: '', chantingCompletionTime: '', readingDuration: '', absentReason: '', bookName: '', hearingDuration: '', inTemple: false
   });
 
   const [score, setScore] = useState(0);
@@ -72,13 +72,13 @@ const SadhanaTracker = ({ currentUser, prefilledDate }) => {
   useEffect(() => {
     let newScore = 0;
     activeCore.forEach(act => {
-      newScore += calculatePoints(act.id, activityTimes[act.id], config);
+      newScore += calculatePoints(act.id, activityTimes[act.id], config, details.inTemple);
     });
     activeOptional.forEach(act => {
-      newScore += calculatePoints(act.id, activityTimes[act.id], config);
+      newScore += calculatePoints(act.id, activityTimes[act.id], config, details.inTemple);
     });
     setScore(Math.min(newScore, maxScore)); 
-  }, [activityTimes, maxScore]);
+  }, [activityTimes, maxScore, details.inTemple]);
 
   const loadData = (selectedDate) => {
     const data = JSON.parse(localStorage.getItem(`sadhana_history_${currentUser.email}`) || '[]');
@@ -157,6 +157,15 @@ const SadhanaTracker = ({ currentUser, prefilledDate }) => {
     if (hasAbsentCore && !details.absentReason) {
       setErrorMsg('Please provide a reason for the missing core activities.');
       return;
+    }
+
+    if (date === todayStr && details.chantingCompletionTime) {
+      const now = new Date();
+      const [hours, minutes] = details.chantingCompletionTime.split(':').map(Number);
+      if (hours > now.getHours() || (hours === now.getHours() && minutes > now.getMinutes())) {
+        setErrorMsg('Chanting completion time cannot be in the future.');
+        return;
+      }
     }
 
     setErrorMsg('');
@@ -254,6 +263,16 @@ const SadhanaTracker = ({ currentUser, prefilledDate }) => {
             </div>
           );
         })}
+      </div>
+      
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
+        <input 
+          type="date" 
+          value={date} 
+          onChange={(e) => setDate(e.target.value)} 
+          max={new Date().toISOString().split('T')[0]} 
+          style={{ padding: '0.5rem', borderRadius: '8px', background: 'var(--bg-main)', color: 'var(--text-main)', border: '1px solid var(--border-subtle)' }}
+        />
       </div>
 
       {isLocked && !unlockRequested && (
@@ -426,12 +445,28 @@ const SadhanaTracker = ({ currentUser, prefilledDate }) => {
               <label>Reading Duration (Mins) <span style={{color: 'var(--accent-rose)'}}>*</span></label>
               <input type="number" className="form-control" min="0" placeholder="e.g. 45" value={details.readingDuration || ''} onChange={(e) => setDetails({...details, readingDuration: e.target.value})} required />
             </div>
-            {currentUser?.status !== 'FOLK Resident' && (
-              <div className="form-group">
-                <label>Total Hearing (Mins) <span style={{color: 'var(--accent-rose)'}}>*</span></label>
-                <input type="number" className="form-control" min="0" placeholder="e.g. 30" value={details.hearingDuration || ''} onChange={(e) => setDetails({...details, hearingDuration: e.target.value})} required />
+            <div className="form-group">
+              <label>Total Hearing (Mins) <span style={{color: 'var(--accent-rose)'}}>*</span></label>
+              <input type="number" className="form-control" min="0" placeholder="e.g. 30" value={details.hearingDuration || ''} onChange={(e) => setDetails({...details, hearingDuration: e.target.value})} required />
+            </div>
+            
+            <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '1.5rem' }}>
+              <label style={{ margin: 0 }}>In Temple Today?</label>
+              <div 
+                onClick={() => setDetails({...details, inTemple: !details.inTemple})}
+                style={{ 
+                  width: '50px', height: '26px', borderRadius: '13px', 
+                  background: details.inTemple ? 'var(--primary-amber)' : 'var(--bg-main)', 
+                  position: 'relative', cursor: 'pointer', transition: 'background 0.3s' 
+                }}
+              >
+                <div style={{ 
+                  width: '22px', height: '22px', borderRadius: '50%', background: '#fff', 
+                  position: 'absolute', top: '2px', left: details.inTemple ? '26px' : '2px', 
+                  transition: 'left 0.3s', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' 
+                }} />
               </div>
-            )}
+            </div>
           </div>
         </div>
 

@@ -21,7 +21,7 @@ export const getAbsentCode = (reasonStr) => {
   return 'AB';
 };
 
-export const calculatePoints = (activityId, timeStr, config = null) => {
+export const calculatePoints = (activityId, timeStr, config = null, inTemple = false) => {
   if (!timeStr) return 0;
   
   const timeInMins = parseTimeToMins(timeStr);
@@ -29,7 +29,18 @@ export const calculatePoints = (activityId, timeStr, config = null) => {
   
   if (!actConfig || !actConfig.enabled) return 0;
 
-  const baseMins = parseTimeToMins(actConfig.time);
+  let baseMins = parseTimeToMins(actConfig.time);
+  
+  if (inTemple) {
+    switch (activityId) {
+      case 'mangala_arati': baseMins = parseTimeToMins("04:30"); break;
+      case 'japa': baseMins = parseTimeToMins("05:10"); break;
+      case 'class': baseMins = parseTimeToMins("08:00"); break;
+      case 'yoga': baseMins = parseTimeToMins("09:00"); break;
+      case 'reading': baseMins = parseTimeToMins("11:00"); break;
+      default: break;
+    }
+  }
 
   switch (activityId) {
     case 'mangala_arati':

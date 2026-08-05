@@ -1,11 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { LogIn, UserPlus } from 'lucide-react';
 import Login from './Login';
 import SignUp from './SignUp';
 import folkLogo from '../assets/folk_logo.png';
+import { cloudFetchAllUsers } from '../services/firebase';
 
 const Auth = ({ onAuthSuccess }) => {
   const [mode, setMode] = useState('login'); // 'login' | 'signup'
+
+  useEffect(() => {
+    cloudFetchAllUsers().then(users => {
+      localStorage.setItem('sadhana_users', JSON.stringify(users));
+    }).catch(console.error);
+  }, []);
 
   return (
     <div style={{

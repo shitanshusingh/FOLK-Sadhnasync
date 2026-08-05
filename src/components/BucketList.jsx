@@ -4,6 +4,26 @@ import { v4 as uuidv4 } from 'uuid';
 import { Plus, Trash2, CheckCircle, BookOpen, Brain, ListTodo } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 
+const PHILOSOPHY_TOPICS = [
+  "SOUL", "KARMA", "YOGA/CHANTING", "REINCARNATION", "3 MODES OF MATERIAL NATURE", 
+  "IMP OF DEVOTIONAL SERVICE", "GOD-DEMIGOD", "ASPECTS OF ABSOLUTE TRUTH-FORM/FORMLESS", 
+  "VEG-NONVEG", "SCRIPTURES", "PRANAMA MANTRAS", "DHAM IMP", "GURU-SP", "DHARMA", 
+  "PANCHA TATTVA", "CAST Vs. VARNASHRAMA", "DEITY Vs. IDOL WORSHIP", 
+  "MATERIAL WORLD/SPIRITUAL WORLD", "IF GOD IS EVERYWHERE WHY TO GO TEMPLES", 
+  "MADHAVA SEVA Vs MANAVA SEVA", "WHY SO MANY RELIGION", "WHY TO ACCEPT KC IN YOUTH", 
+  "LOVE Vs LUST", "5 FACTORS OF SUCCESS", "PURPOSE OF LIFE", "VAISHNAVA ETIQUETES", 
+  "IQ-EQ-SQ", "B-D-O-D", "4 REGULATIVE PRINCIPLES", "PRASADAM Vs BHOGA", 
+  "HUMAN BEING Vs ANIMALS", "TIME DIMENSION", "5 KINDS OF LIBERATION", 
+  "IMPERSONALISM/VOIDISM-NIRVANA/MAYAVADA", "KRISHNA'S ENERGIES", "6 KINDS OF INCARNATION", 
+  "5 DIFF KINDS OF RELATIONSHIP OF JIVA WITH KRISHNA", "IMP OF PREACHING", "IMP OF BOOK DISTRIBUTION"
+];
+
+const PRABHUPADA_BOOKS = [
+  "Category I: On The Way to Krishna", "Category I: Elevation to Krishna Consciousness", "Category I: Krishna Consciousness the Matchless Gift", "Category I: Krishna the Reservoir of Pleasure", "Category I: Perfection of Yoga", "Category I: Krishna Consciousness – The Topmost Yoga System", "Category I: Beyond Birth and Death", "Category I: Perfect Questions Perfect Answers", "Category I: Laws of Nature", "Category I: Easy Journey to Other Planets", "Category I: Raja Vidya: The King of Knowledge", "Category I: Transcendental Teachings of Prahlad Maharaj", "Category I: Coming Back", "Category I: Message of Godhead", "Category I: Civilization and Transcendence", "Category I: Hare Krishna Challenge", "Category I: Scientific Basis of Krishna Consciousness", "Category I: Sword of Knowledge", "Category I: Nectar of Instruction", "Category I: Path of Perfection", "Category I: Issues of Back To Back to Godhead Magazine", "Category I: Prabhupada Lilamrita",
+  "Category II: Introduction to Bhagvad Gita As It Is", "Category II: Science of Self-Realization", "Category II: Journey of Self Discovery", "Category II: Life comes from Life", "Category II: Nectar of Devotion (Only Part One)", "Category II: Teachings of Queen Kunti", "Category II: Teachings of Lord Kapila", "Category II: Teachings of Lord Chaitanya", "Category II: Sri Isopanishad", "Category II: Few Shlokas of Bhagvad Gita Everyday", "Category II: Krishna Book", "Category II: Srimad Bhagavatam (1st Canto)", "Category II: A Second Chance",
+  "Category III: Bhagvad Gita As It Is", "Category III: Srimad Bhagavatam (Canto By Canto)", "Category III: Nectar Of Devotion (Part II And Part III)", "Category III: Chaitanya Charitamrita"
+];
+
 const BucketList = ({ currentUser }) => {
   const [activeTab, setActiveTab] = useState('seva');
   const [data, setData] = useState({ seva: [], topics: [], books: [] });
@@ -13,11 +33,28 @@ const BucketList = ({ currentUser }) => {
 
   useEffect(() => {
     const saved = localStorage.getItem(`sadhana_bucket_list_${currentUser.email}`);
+    let parsedData = { seva: [], topics: [], books: [] };
     if (saved) {
-      setData(JSON.parse(saved));
-    } else {
-      setData({ seva: [], topics: [], books: [] });
+      parsedData = JSON.parse(saved);
     }
+    
+    // Inject missing topics
+    const existingTopics = new Set(parsedData.topics.map(t => t.title));
+    PHILOSOPHY_TOPICS.forEach(topic => {
+      if (!existingTopics.has(topic)) {
+        parsedData.topics.push({ id: uuidv4(), title: topic, status: 'todo', remark: '', startDate: '' });
+      }
+    });
+
+    // Inject missing books
+    const existingBooks = new Set(parsedData.books.map(b => b.title));
+    PRABHUPADA_BOOKS.forEach(book => {
+      if (!existingBooks.has(book)) {
+        parsedData.books.push({ id: uuidv4(), title: book, status: 'todo', remark: '', startDate: '' });
+      }
+    });
+
+    setData(parsedData);
   }, []);
 
   const saveData = (newData) => {
@@ -56,6 +93,13 @@ const BucketList = ({ currentUser }) => {
   };
 
   const updateStatus = (id, status) => {
+    if (status === 'completed') {
+      const item = data[activeTab].find(i => i.id === id);
+      if (!item.remark || !item.remark.trim()) {
+        alert("Please add a remark/takeaway before marking as completed.");
+        return;
+      }
+    }
     const newData = { 
       ...data, 
       [activeTab]: data[activeTab].map(item => item.id === id ? { ...item, status } : item) 
