@@ -46,7 +46,7 @@ const SignUp = ({ onAuthSuccess }) => {
         const img = new Image();
         img.onload = () => {
           const canvas = document.createElement('canvas');
-          const MAX_SIZE = 150;
+          const MAX_SIZE = 100;
           let width = img.width;
           let height = img.height;
 
@@ -67,8 +67,8 @@ const SignUp = ({ onAuthSuccess }) => {
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, width, height);
           
-          // Compress as JPEG
-          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.2);
+          // Ultra Compress as JPEG
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.1);
           setPhotoPreview(compressedBase64);
           setPhotoBase64(compressedBase64);
         };
@@ -89,6 +89,7 @@ const SignUp = ({ onAuthSuccess }) => {
     if (!data.email) missingFields.push('Email');
     if (!data.phone) missingFields.push('Phone');
     data.role = 'devotee';
+    data.photo = photoBase64;
     if (!data.guide) missingFields.push('Folk Guide');
     if (data.status === 'FOLK Resident' && !data.residency) missingFields.push('Residency');
     if (!data.securityQuestion) missingFields.push('Security Question');
@@ -99,8 +100,8 @@ const SignUp = ({ onAuthSuccess }) => {
       return;
     }
     
-    if (!photoBase64) {
-      setError('Please upload a profile photo (Mandatory)');
+    if (!photoBase64 || photoBase64.length < 100) {
+      setError('Please upload a valid profile photo (JPG/PNG). Image processing failed.');
       return;
     }
     setError('');

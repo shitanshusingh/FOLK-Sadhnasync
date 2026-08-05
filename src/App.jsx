@@ -547,8 +547,20 @@ function App() {
       )}
 
       {/* Profile Modal */}
-      {showProfile && (
-        <Profile user={currentUser} onClose={() => setShowProfile(false)} onLogout={handleLogout} onUpdateUser={setCurrentUser} />
+      {(showProfile || (!currentUser.photo && currentUser.role !== 'admin')) && (
+        <Profile 
+          user={currentUser} 
+          onClose={() => {
+            if (!currentUser.photo && currentUser.role !== 'admin') {
+              alert("A profile photo is strictly mandatory to use the app. Please upload one now.");
+            } else {
+              setShowProfile(false);
+            }
+          }} 
+          onLogout={handleLogout} 
+          onUpdateUser={setCurrentUser} 
+          defaultIsEditing={!currentUser.photo}
+        />
       )}
     </div>
   );

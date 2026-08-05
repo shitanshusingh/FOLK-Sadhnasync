@@ -117,6 +117,18 @@ const SadhanaTracker = ({ currentUser, prefilledDate }) => {
     return hours >= 12;
   };
 
+  const getTargetTime = (id, baseTime, inTemple) => {
+    if (!inTemple) return baseTime;
+    switch (id) {
+      case 'mangala_arati': return "04:30";
+      case 'japa': return "05:10";
+      case 'class': return "08:00";
+      case 'yoga': return "09:00";
+      case 'reading': return "11:00";
+      default: return baseTime;
+    }
+  };
+
   const handleSave = (e) => {
     if (e) e.preventDefault();
     if (isLocked && !unlockRequested) return;
@@ -229,6 +241,7 @@ const SadhanaTracker = ({ currentUser, prefilledDate }) => {
       >
         {fullMonthDays.map(dStr => {
           const isSelected = dStr === date;
+          const isFuture = parseISO(dStr) > startOfToday();
           const dotColor = getStatusDot(dStr);
           const dayNum = format(parseISO(dStr), 'd');
           const dayName = format(parseISO(dStr), 'EEE');
@@ -237,7 +250,7 @@ const SadhanaTracker = ({ currentUser, prefilledDate }) => {
             <div 
               key={dStr}
               data-date={dStr}
-              onClick={() => setDate(dStr)}
+              onClick={() => { if (!isFuture) setDate(dStr); }}
               style={{
                 flex: '0 0 auto',
                 width: '65px',
@@ -249,10 +262,12 @@ const SadhanaTracker = ({ currentUser, prefilledDate }) => {
                 flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                cursor: 'pointer',
+                cursor: isFuture ? 'not-allowed' : 'pointer',
+                opacity: isFuture ? 0.3 : 1,
                 color: isSelected ? '#fff' : 'var(--text-main)',
                 position: 'relative',
-                transition: 'all 0.2s ease'
+                transition: 'all 0.2s',
+                boxShadow: isSelected ? '0 4px 15px rgba(245,158,11,0.2)' : 'none'
               }}
             >
               <div style={{ fontSize: '0.75rem', opacity: 0.8, marginBottom: '2px' }}>{dayName}</div>
@@ -329,8 +344,8 @@ const SadhanaTracker = ({ currentUser, prefilledDate }) => {
               </thead>
               <tbody>
                 {activeCore.map(activity => {
-                  const currentPts = calculatePoints(activity.id, activityTimes[activity.id], config);
-                  const targetTime = config[activity.id].time;
+                  const currentPts = calculatePoints(activity.id, activityTimes[activity.id], config, details.inTemple);
+                  const targetTime = getTargetTime(activity.id, config[activity.id].time, details.inTemple);
                   
                   return (
                     <tr key={activity.id}>
@@ -367,8 +382,8 @@ const SadhanaTracker = ({ currentUser, prefilledDate }) => {
               <table className="custom-table" style={{ textAlign: 'left' }}>
                 <tbody>
                   {activeOptional.map(activity => {
-                    const currentPts = calculatePoints(activity.id, activityTimes[activity.id], config);
-                    const targetTime = config[activity.id].time;
+                    const currentPts = calculatePoints(activity.id, activityTimes[activity.id], config, details.inTemple);
+                    const targetTime = getTargetTime(activity.id, config[activity.id].time, details.inTemple);
                   
                   return (
                     <tr key={activity.id}>

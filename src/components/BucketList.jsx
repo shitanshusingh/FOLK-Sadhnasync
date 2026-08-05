@@ -24,6 +24,12 @@ const PRABHUPADA_BOOKS = [
   "Category III: Bhagvad Gita As It Is", "Category III: Srimad Bhagavatam (Canto By Canto)", "Category III: Nectar Of Devotion (Part II And Part III)", "Category III: Chaitanya Charitamrita"
 ];
 
+const isDefaultItem = (title, tab) => {
+  if (tab === 'topics') return PHILOSOPHY_TOPICS.includes(title);
+  if (tab === 'books') return PRABHUPADA_BOOKS.includes(title);
+  return false;
+};
+
 const BucketList = ({ currentUser }) => {
   const [activeTab, setActiveTab] = useState('seva');
   const [data, setData] = useState({ seva: [], topics: [], books: [] });
@@ -76,7 +82,7 @@ const BucketList = ({ currentUser }) => {
     if (activeTab === 'topics' && !payload.status) payload.status = 'todo';
     if (activeTab === 'books' && !payload.status) payload.status = 'reading';
     
-    const newData = { ...data, [activeTab]: [...data[activeTab], payload] };
+    const newData = { ...data, [activeTab]: [payload, ...data[activeTab]] };
     saveData(newData);
     setIsAdding(false);
     setNewItem({ title: '', status: 'todo', remark: '', startDate: '' });
@@ -115,70 +121,93 @@ const BucketList = ({ currentUser }) => {
     saveData(newData);
   };
 
-  const renderTwoColumnLayout = (items, inProgressStatuses, completedStatus, renderInProgressContent, renderCompletedContent) => (
-    <div className="grid-cols-2">
-      <div className="panel" style={{ background: 'rgba(15,23,42,0.6)' }}>
-        <h3 className="panel-title" style={{ color: 'var(--text-main)', marginBottom: '1rem' }}>To-Do & In Progress</h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-          {items.filter(s => s.status !== completedStatus).map(item => (
-            <div key={item.id} style={{ background: item.addedByGuide ? 'rgba(245, 158, 11, 0.08)' : 'var(--bg-input)', padding: '1rem', borderRadius: 'var(--radius-sm)', border: item.addedByGuide ? '1px solid rgba(245, 158, 11, 0.4)' : '1px solid var(--border-subtle)' }}>
-              {item.addedByGuide && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem', color: 'var(--primary-amber)', fontSize: '0.75rem', fontWeight: 'bold' }}>
-                  <span>⭐ PRIORITY — Assigned by FOLK Guide</span>
-                </div>
-              )}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <span style={{ fontWeight: '500' }}>{item.title}</span>
-                <button onClick={() => deleteItem(item.id)} style={{ background: 'transparent', border: 'none', color: 'var(--accent-rose)', cursor: 'pointer' }}><Trash2 size={16}/></button>
-              </div>
-              {renderInProgressContent(item)}
-            </div>
-          ))}
-          {items.filter(s => s.status !== completedStatus).length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No pending items.</p>}
-        </div>
-      </div>
+  const renderTwoColumnLayout = (items, inProgressStatuses, completedStatus, renderInProgressContent, renderCompletedContent, tabName) => {
+    const defaults = items.filter(i => isDefaultItem(i.title, tabName));
+    const customs = items.filter(i => !isDefaultItem(i.title, tabName));
+    const sorted = [...defaults, ...customs];
 
-      <div className="panel" style={{ background: 'rgba(16,185,129,0.05)', borderColor: 'rgba(16,185,129,0.2)' }}>
-        <h3 className="panel-title" style={{ color: 'var(--accent-emerald)', marginBottom: '1rem' }}>Completed</h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-          {items.filter(s => s.status === completedStatus).map(item => (
-            <div key={item.id} style={{ background: 'var(--bg-card)', padding: '1rem', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(16,185,129,0.3)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-                <span style={{ fontWeight: '600', color: 'var(--accent-emerald)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <CheckCircle size={16}/> {item.title}
-                </span>
-                <button onClick={() => deleteItem(item.id)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><Trash2 size={14}/></button>
+    return (
+      <div className="grid-cols-2">
+        <div className="panel" style={{ background: 'rgba(15,23,42,0.6)' }}>
+          <h3 className="panel-title" style={{ color: 'var(--text-main)', marginBottom: '1rem' }}>To-Do & In Progress</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+            {sorted.filter(s => s.status !== completedStatus).map(item => (
+              <div key={item.id} style={{ background: item.addedByGuide ? 'rgba(245, 158, 11, 0.08)' : 'var(--bg-input)', padding: '1rem', borderRadius: 'var(--radius-sm)', border: item.addedByGuide ? '1px solid rgba(245, 158, 11, 0.4)' : '1px solid var(--border-subtle)' }}>
+                {item.addedByGuide && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem', color: 'var(--primary-amber)', fontSize: '0.75rem', fontWeight: 'bold' }}>
+                    <span>⭐ PRIORITY — Assigned by FOLK Guide</span>
+                  </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <span style={{ fontWeight: '500' }}>{item.title}</span>
+                  {!isDefaultItem(item.title, tabName) && (
+                    <button onClick={() => deleteItem(item.id)} style={{ background: 'transparent', border: 'none', color: 'var(--accent-rose)', cursor: 'pointer' }}><Trash2 size={16}/></button>
+                  )}
+                </div>
+                {renderInProgressContent(item)}
               </div>
-              {renderCompletedContent(item)}
-            </div>
-          ))}
-          {items.filter(s => s.status === completedStatus).length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No completed items yet.</p>}
+            ))}
+            {sorted.filter(s => s.status !== completedStatus).length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No pending items.</p>}
+          </div>
+        </div>
+
+        <div className="panel" style={{ background: 'rgba(16,185,129,0.05)', borderColor: 'rgba(16,185,129,0.2)' }}>
+          <h3 className="panel-title" style={{ color: 'var(--accent-emerald)', marginBottom: '1rem' }}>Completed</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+            {sorted.filter(s => s.status === completedStatus).map(item => (
+              <div key={item.id} style={{ background: 'var(--bg-card)', padding: '1rem', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(16,185,129,0.3)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                  <span style={{ fontWeight: '600', color: 'var(--accent-emerald)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <CheckCircle size={16}/> {item.title}
+                  </span>
+                  {!isDefaultItem(item.title, tabName) && (
+                    <button onClick={() => deleteItem(item.id)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><Trash2 size={14}/></button>
+                  )}
+                </div>
+                {renderCompletedContent(item)}
+              </div>
+            ))}
+            {sorted.filter(s => s.status === completedStatus).length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No completed items yet.</p>}
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderSevaTab = () => renderTwoColumnLayout(
     data.seva,
     ['todo', 'progress'],
     'completed',
     (item) => (
-      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
-        <button className={`badge ${item.status === 'todo' ? 'badge-amber' : 'badge-amber disabled'}`} onClick={() => updateStatus(item.id, 'todo')}>To-Do</button>
-        <button className={`badge ${item.status === 'progress' ? 'badge-blue' : 'badge-blue disabled'}`} onClick={() => updateStatus(item.id, 'progress')}>In Progress</button>
-        <button className="badge badge-emerald disabled" onClick={() => updateStatus(item.id, 'completed')}>Mark Complete</button>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', marginTop: '1rem' }}>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button className={`badge ${item.status === 'todo' ? 'badge-amber' : 'badge-amber disabled'}`} onClick={() => updateStatus(item.id, 'todo')}>To-Do</button>
+          <button className={`badge ${item.status === 'progress' ? 'badge-blue' : 'badge-blue disabled'}`} onClick={() => updateStatus(item.id, 'progress')}>In Progress</button>
+          <button className="badge badge-emerald disabled" onClick={() => updateStatus(item.id, 'completed')}>Mark Complete</button>
+        </div>
+        {item.status !== 'todo' && (
+          <input 
+            type="text" 
+            className="form-control" 
+            placeholder="Add completion remark (required to finish)..." 
+            value={item.remark || ''} 
+            onChange={(e) => updateRemark(item.id, e.target.value)}
+            style={{ fontSize: '0.85rem', padding: '0.4rem 0.6rem' }}
+          />
+        )}
       </div>
     ),
     (item) => (
       <input 
         type="text" 
         className="form-control" 
-        placeholder="Add completion remark..." 
+        placeholder="Completion remark..." 
         value={item.remark || ''} 
         onChange={(e) => updateRemark(item.id, e.target.value)}
         style={{ fontSize: '0.85rem', padding: '0.4rem 0.6rem', marginTop: '0.5rem' }}
       />
-    )
+    ),
+    'seva'
   );
 
   const renderTopicsTab = () => renderTwoColumnLayout(
@@ -186,10 +215,22 @@ const BucketList = ({ currentUser }) => {
     ['todo', 'progress'],
     'completed',
     (item) => (
-      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
-        <button className={`badge ${item.status === 'todo' ? 'badge-amber' : 'badge-amber disabled'}`} onClick={() => updateStatus(item.id, 'todo')}>To Learn</button>
-        <button className={`badge ${item.status === 'progress' ? 'badge-blue' : 'badge-blue disabled'}`} onClick={() => updateStatus(item.id, 'progress')}>Studying</button>
-        <button className="badge badge-emerald disabled" onClick={() => updateStatus(item.id, 'completed')}>Concept Clear</button>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', marginTop: '1rem' }}>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button className={`badge ${item.status === 'todo' ? 'badge-amber' : 'badge-amber disabled'}`} onClick={() => updateStatus(item.id, 'todo')}>To Learn</button>
+          <button className={`badge ${item.status === 'progress' ? 'badge-blue' : 'badge-blue disabled'}`} onClick={() => updateStatus(item.id, 'progress')}>Studying</button>
+          <button className="badge badge-emerald disabled" onClick={() => updateStatus(item.id, 'completed')}>Concept Clear</button>
+        </div>
+        {item.status !== 'todo' && (
+          <input 
+            type="text" 
+            className="form-control" 
+            placeholder="Key takeaway (required to finish)..." 
+            value={item.remark || ''} 
+            onChange={(e) => updateRemark(item.id, e.target.value)}
+            style={{ fontSize: '0.85rem', padding: '0.4rem 0.6rem' }}
+          />
+        )}
       </div>
     ),
     (item) => (
@@ -201,7 +242,8 @@ const BucketList = ({ currentUser }) => {
         onChange={(e) => updateRemark(item.id, e.target.value)}
         style={{ fontSize: '0.85rem', padding: '0.4rem 0.6rem', marginTop: '0.5rem' }}
       />
-    )
+    ),
+    'topics'
   );
 
   const renderBooksTab = () => renderTwoColumnLayout(
@@ -231,7 +273,8 @@ const BucketList = ({ currentUser }) => {
         onChange={(e) => updateRemark(item.id, e.target.value)}
         style={{ fontSize: '0.85rem', padding: '0.4rem 0.6rem', marginTop: '0.5rem' }}
       />
-    )
+    ),
+    'books'
   );
 
   return (
