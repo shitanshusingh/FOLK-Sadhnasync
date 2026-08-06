@@ -1,6 +1,7 @@
 export const calculateUserCurrencies = (email) => {
   const history = JSON.parse(localStorage.getItem(`sadhana_history_${email}`) || '[]');
   const redemptions = JSON.parse(localStorage.getItem('currency_redemptions') || '[]');
+  const conversions = JSON.parse(localStorage.getItem(`sadhana_conversions_${email}`) || '[]');
   
   let lifetimeChaitanya = 0;
   let lifetimeNityanand = 0;
@@ -12,7 +13,7 @@ export const calculateUserCurrencies = (email) => {
     let earnedPrabhupada = 0;
     
     // 1. Chaitanya Currency (Gold)
-    if (entry.score >= 20) { // Max score could technically be higher with bonus, but base is 20
+    if (entry.score >= 20) {
       earnedChaitanya = 1;
     } else {
       // Mercy Clause
@@ -42,6 +43,7 @@ export const calculateUserCurrencies = (email) => {
     lifetimePrabhupada += earnedPrabhupada;
   });
   
+  // Account for Redemptions
   const userRedemptions = redemptions.filter(r => r.email === email && r.status !== 'rejected');
   
   let spentChaitanya = 0;
@@ -53,6 +55,25 @@ export const calculateUserCurrencies = (email) => {
     spentNityanand += Number(r.nityanandCost || 0);
     spentPrabhupada += Number(r.prabhupadaCost || 0);
   });
+
+  // Account for Currency Conversions
+  let convertedGainChaitanya = 0;
+  let convertedGainNityanand = 0;
+  let convertedGainPrabhupada = 0;
+
+  let convertedSpentChaitanya = 0;
+  let convertedSpentNityanand = 0;
+  let convertedSpentPrabhupada = 0;
+
+  conversions.forEach(c => {
+    if (c.fromType === 'Prabhupada') convertedSpentPrabhupada += Number(c.fromAmount || 0);
+    if (c.fromType === 'Nityanand') convertedSpentNityanand += Number(c.fromAmount || 0);
+    if (c.fromType === 'Chaitanya') convertedSpentChaitanya += Number(c.fromAmount || 0);
+
+    if (c.toType === 'Prabhupada') convertedGainPrabhupada += Number(c.toAmount || 0);
+    if (c.toType === 'Nityanand') convertedGainNityanand += Number(c.toAmount || 0);
+    if (c.toType === 'Chaitanya') convertedGainChaitanya += Number(c.toAmount || 0);
+  });
   
   return {
     lifetime: {
@@ -61,9 +82,9 @@ export const calculateUserCurrencies = (email) => {
       prabhupada: lifetimePrabhupada
     },
     balance: {
-      chaitanya: lifetimeChaitanya - spentChaitanya,
-      nityanand: lifetimeNityanand - spentNityanand,
-      prabhupada: lifetimePrabhupada - spentPrabhupada
+      chaitanya: Math.max(0, (lifetimeChaitanya + convertedGainChaitanya) - (spentChaitanya + convertedSpentChaitanya)),
+      nityanand: Math.max(0, (lifetimeNityanand + convertedGainNityanand) - (spentNityanand + convertedSpentNityanand)),
+      prabhupada: Math.max(0, (lifetimePrabhupada + convertedGainPrabhupada) - (spentPrabhupada + convertedSpentPrabhupada))
     }
   };
 };

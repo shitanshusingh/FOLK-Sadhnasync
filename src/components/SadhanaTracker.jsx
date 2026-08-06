@@ -21,7 +21,8 @@ const ABSENT_REASONS = [
   'Sick (Health not well)',
   'Authorized Service',
   'Authorized Travel',
-  'No Reason (Woke up late)'
+  'No Reason (Woke up late)',
+  'Others (OT)'
 ];
 
 const SadhanaTracker = ({ currentUser, prefilledDate }) => {
@@ -45,7 +46,7 @@ const SadhanaTracker = ({ currentUser, prefilledDate }) => {
   });
   
   const [details, setDetails] = useState({
-    sleepTime: '', wakeupTime: '', totalRounds: '', chantingCompletionTime: '', readingDuration: '', absentReason: '', bookName: '', hearingDuration: '', inTemple: false
+    sleepTime: '', wakeupTime: '', totalRounds: '', chantingCompletionTime: '', readingDuration: '', absentReason: '', absentRemark: '', bookName: '', hearingDuration: '', inTemple: false
   });
 
   const [score, setScore] = useState(0);
@@ -189,6 +190,10 @@ const SadhanaTracker = ({ currentUser, prefilledDate }) => {
     const hasAbsentCore = isResident && activeCore.some(a => !activityTimes[a.id]);
     if (hasAbsentCore && !details.absentReason) {
       setErrorMsg('Please provide a reason for the missing core activities.');
+      return;
+    }
+    if (hasAbsentCore && details.absentReason === 'Others (OT)' && !details.absentRemark?.trim()) {
+      setErrorMsg('Please enter a remark explaining why you were absent under Others (OT).');
       return;
     }
 
@@ -538,11 +543,28 @@ const SadhanaTracker = ({ currentUser, prefilledDate }) => {
                 className="form-control" 
                 value={details.absentReason} 
                 onChange={(e) => setDetails({...details, absentReason: e.target.value})}
-                style={{ width: '100%', maxWidth: '300px' }}
+                style={{ width: '100%', maxWidth: '300px', marginBottom: details.absentReason === 'Others (OT)' ? '0.75rem' : '0' }}
               >
                 <option value="">-- Select Reason --</option>
                 {ABSENT_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
               </select>
+
+              {details.absentReason === 'Others (OT)' && (
+                <div style={{ marginTop: '0.75rem' }}>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.3rem' }}>
+                    Enter Remark / Reason for Absence (compulsory):
+                  </label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="e.g. Exam preparation / Family emergency"
+                    value={details.absentRemark || ''}
+                    onChange={(e) => setDetails({...details, absentRemark: e.target.value})}
+                    style={{ width: '100%', maxWidth: '400px' }}
+                    required
+                  />
+                </div>
+              )}
             </div>
           )}
         </div>

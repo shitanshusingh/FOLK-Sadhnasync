@@ -1,5 +1,6 @@
+import OnboardingModal from './components/OnboardingModal';
 import { useState, useEffect, useRef } from 'react';
-import { Home, Calendar, Timer, CheckSquare, Settings, LogOut, Package, Download, Upload, X, User as UserIcon, Bell, Trophy, BookOpen, Cloud, Menu, Wallet } from 'lucide-react';
+import { Home, Calendar, Timer, CheckSquare, Settings, LogOut, Package, Download, Upload, X, User as UserIcon, Bell, Trophy, BookOpen, Cloud, Menu, Wallet, HelpCircle } from 'lucide-react';
 import folkLogo from './assets/folk_logo.png';
 import iskconLogo from './assets/iskcon_logo.png';
 import SadhanaTracker from './components/SadhanaTracker';
@@ -30,6 +31,7 @@ function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [clearedNotifs, setClearedNotifs] = useState(() => JSON.parse(localStorage.getItem('sadhana_cleared_notifs') || '[]'));
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const fileInputRef = useRef(null);
 
   // Apply Theme on Load
@@ -546,6 +548,14 @@ function App() {
           user={currentUser} 
           onClose={() => setShowSettings(false)} 
           onLogout={handleLogout} 
+        />
+      )}
+
+      {/* Onboarding Feature Tour Modal */}
+      {showOnboarding && (
+        <OnboardingModal 
+          user={activeUser} 
+          onClose={() => setShowOnboarding(false)} 
         />
       )}
 
