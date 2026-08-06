@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Award, Clock, CheckCircle, XCircle, Shield, Sparkles, Gift, Info, RefreshCw, ArrowRight } from 'lucide-react';
+import { Award, Clock, CheckCircle, XCircle, Shield, Sparkles, Gift, Info, RefreshCw, ArrowRight, ChevronDown, ChevronUp } from 'lucide-react';
 import { calculateUserCurrencies, getPrestigeTitle } from '../utils/currency';
 import { ACHIEVEMENTS, calculateAchievements } from '../utils/achievements';
 import { ChaitanyaCoinIcon, NityanandCoinIcon, PrabhupadaCoinIcon } from './CoinIcons';
@@ -17,6 +17,7 @@ const Wallet = ({ currentUser }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedSuccess, setSubmittedSuccess] = useState(false);
   const [showRulesInfo, setShowRulesInfo] = useState(true);
+  const [showRulesAccordion, setShowRulesAccordion] = useState(false);
   const [sliderKey, setSliderKey] = useState(0);
 
   // Conversion state
@@ -150,67 +151,6 @@ const Wallet = ({ currentUser }) => {
   return (
     <div className="animate-fade-in" style={{ paddingBottom: '5rem', maxWidth: '850px', margin: '0 auto' }}>
       
-      {/* 💡 DETAILED COMPREHENSIVE POINT RULES CARD */}
-      <div style={{
-        background: 'rgba(15, 23, 42, 0.85)',
-        backdropFilter: 'blur(20px)',
-        border: '1px solid rgba(245, 158, 11, 0.35)',
-        borderRadius: '20px',
-        padding: '1.4rem',
-        marginBottom: '1.2rem',
-        boxShadow: '0 10px 30px rgba(0,0,0,0.4)'
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <h3 style={{ margin: 0, color: '#f59e0b', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Sparkles size={20} /> Official Point System & Conversion Ratios
-          </h3>
-          <span style={{ fontSize: '0.75rem', color: '#c4b5fd', background: 'rgba(139, 92, 246, 0.15)', padding: '0.2rem 0.6rem', borderRadius: '12px', border: '1px solid rgba(139, 92, 246, 0.3)', fontWeight: '700' }}>
-            Prestige: {title}
-          </span>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '0.9rem', fontSize: '0.82rem', color: '#cbd5e1' }}>
-          {/* Chaitanya Gold Rule */}
-          <div style={{ background: 'rgba(251, 191, 36, 0.08)', padding: '0.9rem', borderRadius: '14px', border: '1px solid rgba(251, 191, 36, 0.25)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.4rem' }}>
-              <ChaitanyaCoinIcon size={26} />
-              <strong style={{ color: '#fbbf24', fontSize: '0.92rem' }}>Chaitanya Coin (Gold)</strong>
-            </div>
-            • <strong>How to Earn:</strong> 20/20 Full Daily Sādhana score.<br/>
-            • <strong>Rewards:</strong><br/>
-            &nbsp;&nbsp;- <strong>100 Coins</strong> = Up to 100% Free FOLK Trip<br/>
-            &nbsp;&nbsp;- <strong>20 Coins</strong> = Up to 100% Free Event Entry<br/>
-            • <strong>Exchange Ratio:</strong> 1 Gold = 3 Blue = 6 Saffron<br/>
-            <span style={{ color: '#fef08a', fontSize: '0.75rem', marginTop: '0.4rem', display: 'block', borderTop: '1px stroke rgba(251,191,36,0.2)', paddingTop: '0.3rem' }}>
-              ⚡ <em>Missed Morning Sadhana?</em> Do 16+ rounds, 60+ mins reading & 60+ mins hearing to still recover 1 Gold Coin!
-            </span>
-          </div>
-
-          {/* Nityanand Blue Rule */}
-          <div style={{ background: 'rgba(59, 130, 246, 0.08)', padding: '0.9rem', borderRadius: '14px', border: '1px solid rgba(59, 130, 246, 0.25)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.4rem' }}>
-              <NityanandCoinIcon size={26} />
-              <strong style={{ color: '#60a5fa', fontSize: '0.92rem' }}>Nityanand Coin (Blue)</strong>
-            </div>
-            • <strong>How to Earn:</strong> 10+ Sādhana score.<br/>
-            • <strong>Exchange Ratio:</strong> 1 Blue Coin = 2 Saffron Coins.<br/>
-            • <strong>Upgrade:</strong> 3 Nityanand Blue Coins = 1 Chaitanya Gold Coin!
-          </div>
-
-          {/* Prabhupada Saffron Rule */}
-          <div style={{ background: 'rgba(234, 88, 12, 0.08)', padding: '0.9rem', borderRadius: '14px', border: '1px solid rgba(234, 88, 12, 0.25)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.4rem' }}>
-              <PrabhupadaCoinIcon size={26} />
-              <strong style={{ color: '#f97316', fontSize: '0.92rem' }}>Prabhupada Coin (Bonus)</strong>
-            </div>
-            • <strong>How to Earn:</strong> Bonus reading (&gt;60 mins), hearing (&gt;60 mins), or 20+ rounds.<br/>
-            • <strong>Exchange Ratios:</strong><br/>
-            &nbsp;&nbsp;- <strong>2 Prabhupada Coins</strong> = 1 Nityanand Blue Coin<br/>
-            &nbsp;&nbsp;- <strong>6 Prabhupada Coins</strong> = 1 Chaitanya Gold Coin
-          </div>
-        </div>
-      </div>
-
       {/* 💰 DYNAMIC GLASSMORPHIC CURRENCY CARDS */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.8rem', marginBottom: '1.2rem' }}>
         
@@ -283,6 +223,92 @@ const Wallet = ({ currentUser }) => {
           </div>
         </div>
 
+      </div>
+
+      {/* 💡 SLEEK 1-LINE COLLAPSIBLE POINT RULES ACCORDION */}
+      <div style={{
+        background: 'rgba(15, 23, 42, 0.85)',
+        backdropFilter: 'blur(20px)',
+        border: '1px solid rgba(245, 158, 11, 0.35)',
+        borderRadius: '16px',
+        marginBottom: '1.2rem',
+        boxShadow: '0 8px 25px rgba(0,0,0,0.3)',
+        overflow: 'hidden'
+      }}>
+        {/* Accordion Toggle Bar */}
+        <div 
+          onClick={() => setShowRulesAccordion(!showRulesAccordion)}
+          style={{
+            padding: '0.9rem 1.2rem',
+            cursor: 'pointer',
+            display: 'flex',
+            justify: 'space-between',
+            alignItems: 'center',
+            background: 'rgba(245, 158, 11, 0.06)',
+            transition: 'background 0.2s'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <Sparkles size={20} color="#f59e0b" />
+            <span style={{ fontWeight: '800', color: '#f59e0b', fontSize: '0.92rem' }}>
+              Official Point System & Conversion Ratios
+            </span>
+            <span style={{ fontSize: '0.72rem', color: '#c4b5fd', background: 'rgba(139, 92, 246, 0.15)', padding: '0.15rem 0.5rem', borderRadius: '10px', border: '1px solid rgba(139, 92, 246, 0.3)', fontWeight: '700' }}>
+              Prestige: {title}
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#94a3b8', fontSize: '0.8rem', fontWeight: '700' }}>
+            <span>{showRulesAccordion ? 'Hide Details' : 'View Details'}</span>
+            {showRulesAccordion ? <ChevronUp size={18} color="#f59e0b" /> : <ChevronDown size={18} color="#f59e0b" />}
+          </div>
+        </div>
+
+        {/* Collapsible Content */}
+        {showRulesAccordion && (
+          <div className="animate-fade-in" style={{ padding: '1.2rem', borderTop: '1px solid rgba(245, 158, 11, 0.2)' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '0.9rem', fontSize: '0.82rem', color: '#cbd5e1' }}>
+              {/* Chaitanya Gold Rule */}
+              <div style={{ background: 'rgba(251, 191, 36, 0.08)', padding: '0.9rem', borderRadius: '14px', border: '1px solid rgba(251, 191, 36, 0.25)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.4rem' }}>
+                  <ChaitanyaCoinIcon size={26} />
+                  <strong style={{ color: '#fbbf24', fontSize: '0.92rem' }}>Chaitanya Coin (Gold)</strong>
+                </div>
+                • <strong>How to Earn:</strong> 20/20 Full Daily Sādhana score.<br/>
+                • <strong>Rewards:</strong><br/>
+                &nbsp;&nbsp;- <strong>100 Coins</strong> = Up to 100% Free FOLK Trip<br/>
+                &nbsp;&nbsp;- <strong>20 Coins</strong> = Up to 100% Free Event Entry<br/>
+                • <strong>Exchange Ratio:</strong> 1 Gold = 3 Blue = 6 Saffron<br/>
+                <span style={{ color: '#fef08a', fontSize: '0.75rem', marginTop: '0.4rem', display: 'block', borderTop: '1px stroke rgba(251,191,36,0.2)', paddingTop: '0.3rem' }}>
+                  ⚡ <em>Missed Morning Sadhana?</em> Do 16+ rounds, 60+ mins reading & 60+ mins hearing to still recover 1 Gold Coin!
+                </span>
+              </div>
+
+              {/* Nityanand Blue Rule */}
+              <div style={{ background: 'rgba(59, 130, 246, 0.08)', padding: '0.9rem', borderRadius: '14px', border: '1px solid rgba(59, 130, 246, 0.25)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.4rem' }}>
+                  <NityanandCoinIcon size={26} />
+                  <strong style={{ color: '#60a5fa', fontSize: '0.92rem' }}>Nityanand Coin (Blue)</strong>
+                </div>
+                • <strong>How to Earn:</strong> 10+ Sādhana score.<br/>
+                • <strong>Exchange Ratio:</strong> 1 Blue Coin = 2 Saffron Coins.<br/>
+                • <strong>Upgrade:</strong> 3 Nityanand Blue Coins = 1 Chaitanya Gold Coin!
+              </div>
+
+              {/* Prabhupada Saffron Rule */}
+              <div style={{ background: 'rgba(234, 88, 12, 0.08)', padding: '0.9rem', borderRadius: '14px', border: '1px solid rgba(234, 88, 12, 0.25)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.4rem' }}>
+                  <PrabhupadaCoinIcon size={26} />
+                  <strong style={{ color: '#f97316', fontSize: '0.92rem' }}>Prabhupada Coin (Bonus)</strong>
+                </div>
+                • <strong>How to Earn:</strong> Bonus reading (&gt;60 mins), hearing (&gt;60 mins), or 20+ rounds.<br/>
+                • <strong>Exchange Ratios:</strong><br/>
+                &nbsp;&nbsp;- <strong>2 Prabhupada Coins</strong> = 1 Nityanand Blue Coin<br/>
+                &nbsp;&nbsp;- <strong>6 Prabhupada Coins</strong> = 1 Chaitanya Gold Coin
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 🔄 INTERACTIVE CURRENCY CONVERTER / EXCHANGE CARD */}

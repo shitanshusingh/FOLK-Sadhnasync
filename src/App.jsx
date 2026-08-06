@@ -1,5 +1,5 @@
 import OnboardingModal from './components/OnboardingModal';
-import { useState, useEffect, useRef } from 'react';
+import { cloudSaveRedemption, useState, useEffect, useRef } from 'react';
 import { Home, Calendar, Timer, CheckSquare, Settings, LogOut, Package, Download, Upload, X, User as UserIcon, Bell, Trophy, BookOpen, Cloud, Menu, Wallet, HelpCircle } from 'lucide-react';
 import folkLogo from './assets/folk_logo.png';
 import iskconLogo from './assets/iskcon_logo.png';
@@ -56,6 +56,9 @@ function App() {
     cloudFetchAllUsers().catch(console.error);
     cloudFetchAllSadhanaHistories().catch(console.error);
     cloudFetchNotifications().catch(console.error);
+    // ☁️ Auto-migrate any past offline redemptions from local storage to Cloud DB
+    const localR = JSON.parse(localStorage.getItem('currency_redemptions') || '[]');
+    localR.forEach(r => { if (r && r.id) cloudSaveRedemption(r).catch(console.error); });
     cloudFetchResidencies().then(() => {
       // ONE-TIME MIGRATION: Push local residencies to cloud if not already synced
       const localResidencies = JSON.parse(localStorage.getItem('sadhana_residencies') || '[]');
