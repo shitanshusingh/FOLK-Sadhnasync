@@ -1,6 +1,5 @@
-import OnboardingModal from './components/OnboardingModal';
-import { cloudSaveRedemption, useState, useEffect, useRef } from 'react';
-import { Home, Calendar, Timer, CheckSquare, Settings, LogOut, Package, Download, Upload, X, User as UserIcon, Bell, Trophy, BookOpen, Cloud, Menu, Wallet, HelpCircle } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Home, Calendar, Timer, CheckSquare, Settings, LogOut, Package, Download, Upload, X, User as UserIcon, Bell, Trophy, BookOpen, Cloud, Menu, Wallet, HelpCircle, Eye } from 'lucide-react';
 import folkLogo from './assets/folk_logo.png';
 import iskconLogo from './assets/iskcon_logo.png';
 import SadhanaTracker from './components/SadhanaTracker';
@@ -13,12 +12,12 @@ import SettingsModal from './components/SettingsModal';
 import Leaderboard from './components/Leaderboard';
 import AdminDashboard from './components/AdminDashboard';
 import GuideDashboard from './components/GuideDashboard';
+import OnboardingModal from './components/OnboardingModal';
 import { subDays, format } from 'date-fns';
 import { calculatePoints } from './utils/scoring';
 import {
-  cloudFetchAllUsers, cloudSaveUser, cloudFetchCampaigns, subscribeToCloudUpdates, cloudFetchNotifications, cloudFetchResidencies, cloudSaveResidency, cloudFetchAllSadhanaHistories, safeSetItem, cloudFetchAllBucketLists
+  cloudFetchAllUsers, cloudSaveUser, cloudFetchCampaigns, subscribeToCloudUpdates, cloudFetchNotifications, cloudFetchResidencies, cloudSaveResidency, cloudFetchAllSadhanaHistories, safeSetItem, cloudFetchAllBucketLists, cloudSaveRedemption, cloudFetchAllRedemptions, isCloudActive
 } from './services/firebase';
-import { isCloudActive } from './services/firebase';
 
 function App() {
   const [currentUser, setCurrentUser] = useState(() => JSON.parse(localStorage.getItem('sadhana_current_user') || 'null'));
@@ -33,6 +32,16 @@ function App() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const fileInputRef = useRef(null);
+
+  // 🌸 One-Time Onboarding Tutorial Check
+  useEffect(() => {
+    if (currentUser && currentUser.email && currentUser.role !== 'admin') {
+      const hasSeen = localStorage.getItem(`hasSeenOnboarding_${currentUser.email}`);
+      if (!hasSeen) {
+        setShowOnboarding(true);
+      }
+    }
+  }, [currentUser]);
 
   // Apply Theme on Load
   useEffect(() => {
@@ -56,11 +65,12 @@ function App() {
     cloudFetchAllUsers().catch(console.error);
     cloudFetchAllSadhanaHistories().catch(console.error);
     cloudFetchNotifications().catch(console.error);
+    
     // ☁️ Auto-migrate any past offline redemptions from local storage to Cloud DB
     const localR = JSON.parse(localStorage.getItem('currency_redemptions') || '[]');
     localR.forEach(r => { if (r && r.id) cloudSaveRedemption(r).catch(console.error); });
+
     cloudFetchResidencies().then(() => {
-      // ONE-TIME MIGRATION: Push local residencies to cloud if not already synced
       const localResidencies = JSON.parse(localStorage.getItem('sadhana_residencies') || '[]');
       localResidencies.forEach(res => {
         cloudSaveResidency(res).catch(console.error);
@@ -110,15 +120,29 @@ function App() {
       }
     });
 
+    const unsubRedemptions = subscribeToCloudUpdates('currency_redemptions', (cloudRedemptions) => {
+      if (cloudRedemptions && cloudRedemptions.length > 0) {
+        const local = JSON.parse(localStorage.getItem('currency_redemptions') || '[]');
+        const mergedMap = new Map();
+        local.forEach(r => mergedMap.set(r.id, r));
+        cloudRedemptions.forEach(r => mergedMap.set(r.id, r));
+        const merged = Array.from(mergedMap.values());
+        safeSetItem('currency_redemptions', merged);
+        window.dispatchEvent(new Event('sadhana_redemptions_synced'));
+        window.dispatchEvent(new Event('sadhana_live_sync'));
+      }
+    });
+
     return () => {
       unsubUsers();
       unsubNotifs();
       unsubHistory();
       unsubBucketLists();
+      unsubRedemptions();
     };
   }, []);
 
-  // Ensure Super Admin exists (only locally if cloud is not active yet)
+  // Ensure Super Admin exists
   useEffect(() => {
     const allUsers = JSON.parse(localStorage.getItem('sadhana_users') || '[]');
     if (!allUsers.find(u => u.email === 'admin@folk.in')) {
@@ -189,7 +213,6 @@ function App() {
         const lastNotifiedTime = localStorage.getItem(lastNotifiedKey);
         const now = today.getTime();
         
-        // 2 hours = 2 * 60 * 60 * 1000 = 7200000 ms
         if (!lastNotifiedTime || now - parseInt(lastNotifiedTime, 10) >= 7200000) {
           try {
             if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
@@ -206,16 +229,13 @@ function App() {
     };
 
     checkAndNotify();
-    // Check frequently enough so we don't miss the 2-hour window
-    const intervalId = setInterval(checkAndNotify, 600000); // Every 10 mins
-    
+    const intervalId = setInterval(checkAndNotify, 600000);
     return () => clearInterval(intervalId);
   }, [currentUser]);
 
   const handleLogin = (user) => {
     setCurrentUser(user);
     safeSetItem('sadhana_current_user', user);
-    // ☁️ Sync user profile to Cloud DB on every login/registration
     cloudSaveUser(user);
   };
 
@@ -271,7 +291,6 @@ function App() {
     const todayMonthDay = format(today, 'MM-dd');
     const hour = today.getHours();
     
-    // Check if sadhana is filled
     const historyStr = localStorage.getItem(`sadhana_history_${currentUser.email}`);
     let history = [];
     if (historyStr) {
@@ -288,12 +307,10 @@ function App() {
       });
     }
 
-    // Dynamic Birthday Notifications
     const allUsers = JSON.parse(localStorage.getItem('sadhana_users') || '[]');
     allUsers.forEach(u => {
       if (u.email !== currentUser.email && u.guide === currentUser.guide && u.residency === currentUser.residency && u.dob) {
-        // dob format: YYYY-MM-DD
-        const userDob = u.dob.substring(5); // gets MM-DD
+        const userDob = u.dob.substring(5);
         if (userDob === todayMonthDay) {
           notifs.push({
             id: `bday_${u.email}_${todayStr}`,
@@ -305,7 +322,6 @@ function App() {
       }
     });
 
-    // Global Broadcasts
     const broadcasts = JSON.parse(localStorage.getItem('sadhana_global_broadcasts') || '[]');
     broadcasts.forEach(b => {
       notifs.push({
@@ -316,7 +332,6 @@ function App() {
       });
     });
 
-    // Cloud Personal Notifications
     const cloudNotifs = JSON.parse(localStorage.getItem('sadhana_notifications') || '[]');
     cloudNotifs.forEach(n => {
       if (n.target === currentUser.email) {
@@ -324,11 +339,17 @@ function App() {
       }
     });
 
-    // Filter out cleared notifications
     return notifs.filter(n => !clearedNotifs.includes(n.id));
   };
 
   const notifications = getNotifications();
+
+  const handleImpersonate = (user) => {
+    setImpersonatingUser(user);
+    setCurrentTab(user.role === 'guide' ? 'guide_dashboard' : 'dashboard');
+  };
+
+  const activeUser = impersonatingUser || currentUser;
 
   const renderContent = () => {
     switch (currentTab) {
@@ -351,16 +372,8 @@ function App() {
     }
   };
 
-  const handleImpersonate = (user) => {
-    setImpersonatingUser(user);
-    setCurrentTab(user.role === 'guide' ? 'guide_dashboard' : 'dashboard');
-  };
-
-  const activeUser = impersonatingUser || currentUser;
-
   return (
     <div className="app-container">
-      {/* 🔴 GOD MODE BANNER */}
       {impersonatingUser && (
         <div style={{
           background: '#ef4444', color: 'white', padding: '0.6rem 1rem', display: 'flex', justifyContent: 'space-between',
@@ -377,7 +390,7 @@ function App() {
           </button>
         </div>
       )}
-      {/* Background glow effects */}
+      
       <div className="glow-sphere" style={{ top: '-10%', left: '-10%' }}></div>
       <div className="glow-sphere" style={{ bottom: '-20%', right: '-10%', background: 'var(--accent-blue)', opacity: 0.08 }}></div>
       
@@ -403,7 +416,6 @@ function App() {
               <CheckSquare size={16} /> Bucket List
             </button>
 
-            {/* Notifications Button */}
             <div style={{ position: 'relative' }}>
               <button className="nav-btn btn-secondary" style={{ position: 'relative' }} onClick={() => setShowNotifications(!showNotifications)}>
                 <Bell size={18} />
@@ -415,7 +427,14 @@ function App() {
               </button>
             </div>
 
-            {/* User Profile Button */}
+            <button className="nav-btn btn-secondary" title="App Feature Tour" onClick={() => setShowOnboarding(true)}>
+              <HelpCircle size={18} />
+            </button>
+
+            <button className="nav-btn btn-secondary" onClick={() => setShowSettings(true)}>
+              <Settings size={18} />
+            </button>
+
             <button className="nav-btn btn-secondary header-profile-btn" style={{ padding: '0.4rem', borderRadius: '50%', overflow: 'hidden', border: impersonatingUser ? '2px solid #ef4444' : 'none' }} onClick={() => setShowProfile(true)}>
               {activeUser.photo ? (
                 <img src={activeUser.photo} alt="Profile" style={{ width: '28px', height: '28px', objectFit: 'cover', borderRadius: '50%' }} />
@@ -424,11 +443,6 @@ function App() {
               )}
             </button>
 
-            <button className="nav-btn btn-secondary" onClick={() => setShowSettings(true)}>
-              <Settings size={18} />
-            </button>
-
-            {/* ☁️ Tiny Cloud Sync Status Indicator */}
             <div title={isCloudActive ? 'Cloud Connected ⚡ plk-sadhnasync' : 'Offline Mode'} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', width: '32px', height: '32px', cursor: 'default' }}>
               <Cloud size={16} style={{ color: isCloudActive ? '#10b981' : '#f43f5e', opacity: 0.9 }} />
               <span style={{
@@ -443,17 +457,11 @@ function App() {
                 animation: isCloudActive ? 'cloud-pulse 1.8s ease-in-out infinite' : 'none'
               }} />
             </div>
-            <style>{`
-              @keyframes cloud-pulse {
-                0%, 100% { opacity: 1; transform: scale(1); }
-                50% { opacity: 0.3; transform: scale(0.6); }
-              }
-            `}</style>
 
             <button className="nav-btn btn-rose" style={{ padding: '0.6rem' }} onClick={() => setShowLogoutConfirm(true)}>
               <LogOut size={18} />
             </button>
-            {/* Logout Confirm Dialog (Fixed position for mobile) */}
+
             {showLogoutConfirm && (
               <div onClick={e => e.stopPropagation()} className="animate-fade-in" style={{ position: 'fixed', top: '70px', right: '15px', width: '220px', background: '#0f172a', border: '1px solid rgba(244, 63, 94, 0.25)', borderRadius: '14px', padding: '1rem', boxShadow: '0 15px 35px rgba(0,0,0,0.6)', zIndex: 9999, textAlign: 'center' }}>
                 <p style={{ color: '#f8fafc', margin: '0 0 1rem 0', fontSize: '0.9rem', fontWeight: 'bold', whiteSpace: 'normal', lineHeight: '1.4' }}>Are you sure you want to log out?</p>
@@ -514,7 +522,7 @@ function App() {
         </p>
       </footer>
 
-      {/* Notifications Modal (Moved to root to prevent clipping) */}
+      {/* Notifications Modal */}
       {showNotifications && (
         <>
           <div onClick={() => setShowNotifications(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9998 }} />
@@ -545,20 +553,20 @@ function App() {
         </>
       )}
 
+      {/* Feature Tour Onboarding Modal */}
+      {showOnboarding && (
+        <OnboardingModal 
+          user={activeUser} 
+          onClose={() => setShowOnboarding(false)} 
+        />
+      )}
+
       {/* Settings Modal */}
       {showSettings && (
         <SettingsModal 
           user={currentUser} 
           onClose={() => setShowSettings(false)} 
           onLogout={handleLogout} 
-        />
-      )}
-
-      {/* Onboarding Feature Tour Modal */}
-      {showOnboarding && (
-        <OnboardingModal 
-          user={activeUser} 
-          onClose={() => setShowOnboarding(false)} 
         />
       )}
 
