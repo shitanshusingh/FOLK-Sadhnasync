@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { Trophy, Medal, Award, Flame, Clock, BookOpen, Star, Target, Gift, Calendar as CalIcon, LogOut, User, Activity, X } from 'lucide-react';
+import { Trophy, Medal, Award, Flame, Clock, BookOpen, Star, Target, Gift, Calendar as CalIcon, LogOut, User, Activity, X, Zap } from 'lucide-react';
 import { format, startOfMonth, parseISO, isWithinInterval, isAfter, endOfMonth, differenceInMinutes, differenceInDays, parse, startOfWeek, endOfWeek, startOfDay, endOfDay, startOfQuarter, endOfQuarter, startOfYear, endOfYear } from 'date-fns';
 import { calculatePoints } from '../utils/scoring';
+import { calculateUserCurrencies } from '../utils/currency';
+import { ACHIEVEMENTS, calculateAchievements } from '../utils/achievements';
 
 
 
@@ -185,13 +187,19 @@ const Leaderboard = ({ currentUser }) => {
 
       const totalDaysActive = Math.max(1, filteredHistory.length);
       const percentage = Math.min(100, Math.round((totalScore / (totalDays * 20)) * 100));
+      
+      const walletData = calculateUserCurrencies(user.email);
+      const badgesEarned = calculateAchievements(user.email);
+      const userBadges = ACHIEVEMENTS.filter(b => badgesEarned.includes(b.id));
 
       return {
         ...user,
         totalScore: percentage,
         totalReading: Math.round(totalReading / totalDaysActive),
         totalHearing: Math.round(totalHearing / totalDaysActive),
-        avgWakeupMins
+        avgWakeupMins,
+        walletData,
+        userBadges
       };
     });
 
@@ -363,6 +371,11 @@ const Leaderboard = ({ currentUser }) => {
               <div style={{ background: 'linear-gradient(180deg, #e2e8f0 0%, #cbd5e1 100%)', width: '100%', height: '100px', borderTopLeftRadius: '12px', borderTopRightRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '25px', boxShadow: '0 -5px 15px rgba(0,0,0,0.1)' }}>
                 <span style={{ fontWeight: 'bold', color: '#334155', fontSize: '1.2rem' }}>2</span>
                 <span style={{ fontSize: '0.8rem', color: '#475569', textAlign: 'center', padding: '0 5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>{top3[1].name.split(' ')[0]}</span>
+                {top3[1].userBadges && top3[1].userBadges.length > 0 && (
+                  <div style={{ display: 'flex', gap: '2px', marginTop: '2px' }}>
+                    {top3[1].userBadges.map(b => <span key={b.id} title={b.name} style={{ fontSize: '0.7rem' }}>{b.icon}</span>)}
+                  </div>
+                )}
                 <span style={{ fontWeight: 'bold', color: '#1e293b', marginTop: '5px' }}>{top3[1].totalScore} %</span>
               </div>
             </div>
@@ -381,6 +394,11 @@ const Leaderboard = ({ currentUser }) => {
             <div style={{ background: 'linear-gradient(180deg, #fde68a 0%, #fbbf24 100%)', width: '100%', height: '130px', borderTopLeftRadius: '12px', borderTopRightRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '30px', boxShadow: '0 -5px 20px rgba(251, 191, 36, 0.4)' }}>
               <span style={{ fontWeight: 'bold', color: '#78350f', fontSize: '1.5rem' }}>1</span>
               <span style={{ fontSize: '0.9rem', color: '#92400e', textAlign: 'center', padding: '0 5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>{top3[0].name.split(' ')[0]}</span>
+              {top3[0].userBadges && top3[0].userBadges.length > 0 && (
+                <div style={{ display: 'flex', gap: '2px', marginTop: '2px' }}>
+                  {top3[0].userBadges.map(b => <span key={b.id} title={b.name} style={{ fontSize: '0.8rem' }}>{b.icon}</span>)}
+                </div>
+              )}
               <span style={{ fontWeight: 'bold', color: '#451a03', marginTop: '5px' }}>{top3[0].totalScore} %</span>
             </div>
           </div>
@@ -399,6 +417,11 @@ const Leaderboard = ({ currentUser }) => {
               <div style={{ background: 'linear-gradient(180deg, #fcd34d 0%, #d97706 100%)', width: '100%', height: '80px', borderTopLeftRadius: '12px', borderTopRightRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '20px', boxShadow: '0 -5px 15px rgba(0,0,0,0.1)' }}>
                 <span style={{ fontWeight: 'bold', color: '#78350f', fontSize: '1.2rem' }}>3</span>
                 <span style={{ fontSize: '0.8rem', color: '#78350f', textAlign: 'center', padding: '0 5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>{top3[2].name.split(' ')[0]}</span>
+                {top3[2].userBadges && top3[2].userBadges.length > 0 && (
+                  <div style={{ display: 'flex', gap: '2px', marginTop: '2px' }}>
+                    {top3[2].userBadges.map(b => <span key={b.id} title={b.name} style={{ fontSize: '0.7rem' }}>{b.icon}</span>)}
+                  </div>
+                )}
                 <span style={{ fontWeight: 'bold', color: '#451a03', marginTop: '5px' }}>{top3[2].totalScore} %</span>
               </div>
             </div>
@@ -435,7 +458,10 @@ const Leaderboard = ({ currentUser }) => {
                 {user.photo ? <img src={user.photo} alt={user.name} style={{width:'100%', height:'100%', objectFit:'cover'}} /> : user.name.substring(0, 2).toUpperCase()}
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 'bold', color: 'var(--text-main)' }}>{user.name} {isMe && '(You)'}</div>
+                <div style={{ fontWeight: 'bold', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  {user.name} {isMe && '(You)'}
+                  {user.userBadges && user.userBadges.map(b => <span key={b.id} title={b.name} style={{ fontSize: '0.8rem' }}>{b.icon}</span>)}
+                </div>
                 <div style={{ display: 'flex', gap: '10px', fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px', flexWrap: 'wrap' }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><BookOpen size={12} /> {user.totalReading} mins/day</span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Activity size={12} /> {user.totalHearing} mins/day</span>
@@ -500,9 +526,17 @@ const Leaderboard = ({ currentUser }) => {
                 <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}><Activity size={16} /> Avg Hearing</span>
                 <span style={{ fontWeight: '800', color: '#10b981' }}>{selectedDevotee.totalHearing} mins/day</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>
                 <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}><Clock size={16} /> Avg Wakeup</span>
                 <span style={{ fontWeight: '800', color: '#8b5cf6' }}>{formatWakeup(selectedDevotee.avgWakeupMins)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}><Star size={16} /> Currencies</span>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <span style={{ color: '#fbbf24', fontWeight: 'bold' }}>{selectedDevotee.walletData?.lifetime?.chaitanya || 0} 🌕</span>
+                  <span style={{ color: '#60a5fa', fontWeight: 'bold' }}>{selectedDevotee.walletData?.lifetime?.nityanand || 0} 🔵</span>
+                  <span style={{ color: '#f97316', fontWeight: 'bold' }}>{selectedDevotee.walletData?.lifetime?.prabhupada || 0} 🟠</span>
+                </div>
               </div>
             </div>
           </div>

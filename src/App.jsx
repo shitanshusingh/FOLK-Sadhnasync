@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { Home, Calendar, Timer, CheckSquare, Settings, LogOut, Package, Download, Upload, X, User as UserIcon, Bell, Trophy, BookOpen, Cloud, Menu } from 'lucide-react';
+import { Home, Calendar, Timer, CheckSquare, Settings, LogOut, Package, Download, Upload, X, User as UserIcon, Bell, Trophy, BookOpen, Cloud, Menu, Wallet } from 'lucide-react';
 import folkLogo from './assets/folk_logo.png';
 import iskconLogo from './assets/iskcon_logo.png';
 import SadhanaTracker from './components/SadhanaTracker';
 import Dashboard from './components/Dashboard';
 import BucketList from './components/BucketList';
-import FocusTimer from './components/FocusTimer';
+import WalletComponent from './components/Wallet';
 import Auth from './components/Auth';
 import Profile from './components/Profile';
 import SettingsModal from './components/SettingsModal';
@@ -333,8 +333,8 @@ function App() {
         return <SadhanaTracker currentUser={activeUser} prefilledDate={prefilledDate} />;
       case 'goals':
         return <BucketList currentUser={activeUser} />;
-      case 'timer':
-        return <FocusTimer currentUser={activeUser} />;
+      case 'wallet':
+        return <WalletComponent currentUser={activeUser} />;
       case 'leaderboard':
         return <Leaderboard currentUser={activeUser} />;
       case 'admin_dashboard':
@@ -476,8 +476,11 @@ function App() {
           <button className={`tab-item ${currentTab === 'goals' ? 'active' : ''}`} onClick={() => setCurrentTab('goals')}>
             <CheckSquare size={18} /> <span>Goals</span>
           </button>
-          <button className={`tab-item ${currentTab === 'timer' ? 'active' : ''}`} onClick={() => setCurrentTab('timer')}>
-            <Timer size={18} /> <span>Timer</span>
+          <button className={`tab-item ${currentTab === 'wallet' ? 'active' : ''}`} onClick={() => setCurrentTab('wallet')} style={{ position: 'relative' }}>
+            <Wallet size={18} /> <span>Wallet</span>
+            {localStorage.getItem('hasNewCurrency') === 'true' && (
+              <span style={{ position: 'absolute', top: '8px', right: '15px', background: '#ef4444', border: '2px solid var(--bg-card)', borderRadius: '50%', width: '10px', height: '10px' }} />
+            )}
           </button>
         </div>
       </nav>

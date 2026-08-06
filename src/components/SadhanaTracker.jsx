@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, startOfToday, differenceInDays } from 'date-fns';
-import { Save, AlertTriangle, User, Lock, Unlock, Flame } from 'lucide-react';
+import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, startOfToday, differenceInDays, subDays } from 'date-fns';
+import { Save, AlertTriangle, User, Lock, Unlock, Flame, Star, Zap } from 'lucide-react';
 import { calculatePoints, DEFAULT_RESIDENCY_CONFIG } from '../utils/scoring';
 import { cloudSaveSadhanaLog } from '../services/firebase';
+import { calculateDailyCoins } from '../utils/currency';
 
 const CORE_ACTIVITIES = [
   { id: 'mangala_arati', label: 'Maṅgala Ārati' },
@@ -49,6 +50,7 @@ const SadhanaTracker = ({ currentUser, prefilledDate }) => {
   const [score, setScore] = useState(0);
   const [saveStatus, setSaveStatus] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [earnedCoins, setEarnedCoins] = useState(null);
 
   const [isLocked, setIsLocked] = useState(false);
   const [unlockRequested, setUnlockRequested] = useState(false);
@@ -133,6 +135,23 @@ const SadhanaTracker = ({ currentUser, prefilledDate }) => {
     if (e) e.preventDefault();
     if (isLocked && !unlockRequested) return;
 
+    // --- Chronological Enforcement Logic ---
+    if (date !== format(monthStart, 'yyyy-MM-dd')) {
+      const h = JSON.parse(localStorage.getItem(`sadhana_history_${currentUser.email}`) || '[]');
+      const daysToCheck = eachDayOfInterval({ start: monthStart, end: subDays(parseISO(date), 1) });
+      
+      for (const day of daysToCheck) {
+        const dStr = format(day, 'yyyy-MM-dd');
+        const entryExists = h.some(entry => entry.date === dStr);
+        if (!entryExists) {
+          setErrorMsg(`Please fill your pending Sādhana for ${format(day, 'MMM do')} before proceeding!`);
+          setDate(dStr);
+          return;
+        }
+      }
+    }
+    // ----------------------------------------
+
     const isResident = currentUser?.status === 'FOLK Resident';
     const isNonResident = currentUser?.status === 'Non-FOLK Resident';
     const isBeginner = currentUser?.status === 'Beginner';
@@ -199,6 +218,15 @@ const SadhanaTracker = ({ currentUser, prefilledDate }) => {
     cloudSaveSadhanaLog(currentUser.email, newEntry);
     setSaveStatus('Saved successfully!');
     setTimeout(() => setSaveStatus(''), 3000);
+    
+    // Check if coins were earned
+    const coins = calculateDailyCoins(newEntry);
+    if (coins.chaitanya || coins.nityanand || coins.prabhupada) {
+      localStorage.setItem('hasNewCurrency', 'true');
+      setEarnedCoins(coins);
+      setTimeout(() => setEarnedCoins(null), 5000);
+    }
+    
     window.dispatchEvent(new Event('storage'));
   };
 
@@ -222,6 +250,47 @@ const SadhanaTracker = ({ currentUser, prefilledDate }) => {
   return (
     <div className="animate-fade-in" style={{ paddingBottom: '4rem' }}>
       
+      {/* Coin Earned Popup Modal */}
+      {earnedCoins && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(5px)', animation: 'fade-in 0.3s ease-out' }}>
+          <div style={{ background: 'var(--bg-card)', padding: '2rem', borderRadius: '24px', textAlign: 'center', border: '1px solid var(--border-highlight)', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)', transform: 'scale(1)', animation: 'pop-in 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)' }}>
+            <h2 style={{ margin: '0 0 1rem 0', color: '#fff', fontSize: '1.8rem' }}>Currency Earned!</h2>
+            <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', marginBottom: '1.5rem' }}>
+              {earnedCoins.chaitanya > 0 && (
+                <div style={{ animation: 'bounce 1s infinite' }}>
+                  <div style={{ width: '80px', height: '80px', background: 'linear-gradient(135deg, #fbbf24, #d97706)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 0.5rem', boxShadow: '0 10px 25px rgba(251,191,36,0.5)', border: '4px solid #fef3c7' }}>
+                    <Star size={40} color="#fff" />
+                  </div>
+                  <div style={{ fontWeight: 'bold', color: '#fbbf24' }}>+1 Chaitanya</div>
+                </div>
+              )}
+              {earnedCoins.nityanand > 0 && (
+                <div style={{ animation: 'bounce 1s infinite', animationDelay: '0.1s' }}>
+                  <div style={{ width: '80px', height: '80px', background: 'linear-gradient(135deg, #60a5fa, #3b82f6)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 0.5rem', boxShadow: '0 10px 25px rgba(59,130,246,0.5)', border: '4px solid #eff6ff' }}>
+                    <div style={{ width: '30px', height: '30px', background: '#fff', borderRadius: '50%' }} />
+                  </div>
+                  <div style={{ fontWeight: 'bold', color: '#60a5fa' }}>+1 Nityanand</div>
+                </div>
+              )}
+              {earnedCoins.prabhupada > 0 && (
+                <div style={{ animation: 'bounce 1s infinite', animationDelay: '0.2s' }}>
+                  <div style={{ width: '80px', height: '80px', background: 'linear-gradient(135deg, #f97316, #ea580c)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 0.5rem', boxShadow: '0 10px 25px rgba(234,88,12,0.5)', border: '4px solid #ffedd5' }}>
+                    <Zap size={40} color="#fff" />
+                  </div>
+                  <div style={{ fontWeight: 'bold', color: '#f97316' }}>+1 Prabhupada</div>
+                </div>
+              )}
+            </div>
+            <p style={{ margin: 0, color: 'var(--text-muted)' }}>Wallet updated automatically.</p>
+          </div>
+          <style>{`
+            @keyframes pop-in { 0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+            @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+            @keyframes fade-in { 0% { opacity: 0; } 100% { opacity: 1; } }
+          `}</style>
+        </div>
+      )}
+
       {/* Campaign Multiplier Banner */}
       {campaigns.multiplierDays?.includes(date) && (
         <div style={{ background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)', color: '#fff', padding: '1rem', borderRadius: '12px', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '10px', boxShadow: '0 4px 15px rgba(245,158,11,0.4)' }}>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   Users, Building2, Flag, Send, CheckSquare, BarChart2,
   LogOut, Download, TrendingUp, Award, BookOpen, Target,
@@ -24,7 +24,7 @@ import Dashboard from './Dashboard';
 import SadhanaTracker from './SadhanaTracker';
 import Leaderboard from './Leaderboard';
 import BucketList from './BucketList';
-import FocusTimer from './FocusTimer';
+
 import { DEFAULT_RESIDENCY_CONFIG } from '../utils/scoring';
 import ResidencyConfigModal from './ResidencyConfigModal';
 
@@ -35,6 +35,7 @@ const TABS = [
   { id: 'push_bucket', label: 'Push to Bucket List', icon: CheckSquare },
   { id: 'targeted_msg', label: 'Targeted Broadcast', icon: Send },
   { id: 'residencies', label: 'Manage Residencies', icon: Building2 },
+  { id: 'redemptions', label: 'Redemptions', icon: Gift },
 ];
 
 const SCORE_COLOR = s => s >= 16 ? '#10b981' : s >= 10 ? '#f59e0b' : '#ef4444';
@@ -95,6 +96,10 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
   const [statusMsg, setStatusMsg] = useState('');
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   
+  // Redemptions State
+  const [redemptions, setRedemptions] = useState([]);
+  const [redemptionRemark, setRedemptionRemark] = useState('');
+  
   // Notifications
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -130,6 +135,12 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
     const allNotifs = JSON.parse(localStorage.getItem('sadhana_notifications') || '[]');
     const myNotifs = allNotifs.filter(n => n.target === currentUser.name || n.target === currentUser.email);
     setNotifications(myNotifs);
+
+    // Fetch Redemptions
+    const r = JSON.parse(localStorage.getItem('currency_redemptions') || '[]');
+    // Filter redemptions to only show ones from devotees this guide manages
+    const myRedemptions = r.filter(req => mine.find(d => d.email === req.email));
+    setRedemptions(myRedemptions.sort((a, b) => new Date(b.date) - new Date(a.date)));
   };
 
   const handleClearNotifications = () => {
@@ -142,7 +153,7 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
 
   const showStatus = (msg) => { setStatusMsg(msg); setTimeout(() => setStatusMsg(''), 3000); };
 
-  // Cascading Filter Logic: Category First → If 'FOLK Resident' selected → Residency Filter
+  // Cascading Filter Logic: Category First â†’ If 'FOLK Resident' selected â†’ Residency Filter
   const filteredDevotees = myDevotees.filter(d => {
     const matchStatus = selectedStatus === 'all' || d.status === selectedStatus;
     const matchResidency = (selectedStatus !== 'FOLK Resident') || (selectedResidency === 'all' || d.residency === selectedResidency);
@@ -218,7 +229,7 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
     recipients.forEach(r => {
       broadcasts.push({
         id: `msg_${Date.now()}_${Math.random()}`,
-        message: `📢 Guide ${currentUser.name}: ${messageText}`,
+        message: `ðŸ“¢ Guide ${currentUser.name}: ${messageText}`,
         date: new Date().toISOString(),
         sender: currentUser.name,
         targetEmail: r.email
@@ -288,7 +299,7 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
     globalCamps.push(campObj);
     localStorage.setItem('sadhana_campaigns', JSON.stringify(globalCamps));
 
-    // ☁️ Sync campaign to Cloud DB
+    // â˜ï¸ Sync campaign to Cloud DB
     cloudSaveCampaign(campObj);
 
     // Broadcast Notifications to all targeted devotees
@@ -302,7 +313,7 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
       // 1. Initial Campaign Launch Notification
       broadcasts.push({
         id: `camp_notif_launch_${Date.now()}_${Math.random()}`,
-        message: `🏆 NEW CAMPAIGN: "${newCampaign.title}" (${newCampaign.festival || 'Festival'}) starting ${newCampaign.startDate || 'soon'}! Open your dashboard to ACCEPT and join the Campaign Leaderboard!`,
+        message: `ðŸ† NEW CAMPAIGN: "${newCampaign.title}" (${newCampaign.festival || 'Festival'}) starting ${newCampaign.startDate || 'soon'}! Open your dashboard to ACCEPT and join the Campaign Leaderboard!`,
         date: new Date().toISOString(),
         sender: currentUser.name,
         targetEmail: dev.email,
@@ -311,7 +322,7 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
       // 2. 1-Day Reminder Notification
       broadcasts.push({
         id: `camp_notif_rem_${Date.now()}_${Math.random()}`,
-        message: `⏰ REMINDER: Campaign "${newCampaign.title}" is launching! Accept your Guide's invitation now to participate and win prizes!`,
+        message: `â° REMINDER: Campaign "${newCampaign.title}" is launching! Accept your Guide's invitation now to participate and win prizes!`,
         date: new Date().toISOString(),
         sender: currentUser.name,
         targetEmail: dev.email,
@@ -363,6 +374,30 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
     setEditingResidency(null);
   };
 
+  // Manage Redemptions
+  const handleUpdateRedemption = (reqId, newStatus) => {
+    const all = JSON.parse(localStorage.getItem('currency_redemptions') || '[]');
+    const index = all.findIndex(r => r.id === reqId);
+    if (index >= 0) {
+      const req = all[index];
+      req.status = newStatus;
+      req.remarks = redemptionRemark || (newStatus === 'approved' ? 'Approved by Guide' : 'Rejected by Guide');
+      all[index] = req;
+      localStorage.setItem('currency_redemptions', JSON.stringify(all));
+      
+      // If rejected, refund the points (points were reserved when requested)
+      if (newStatus === 'rejected') {
+        // Technically, right now the wallet just calculates dynamically and subtracts based on 'approved' or 'pending' requests.
+        // Wait, the currency utility subtracts cost of ANY request that is NOT rejected. 
+        // So just changing status to 'rejected' automatically refunds them dynamically! No manual wallet math needed.
+      }
+      
+      showStatus(`Redemption ${newStatus}!`);
+      setRedemptionRemark('');
+      refreshData();
+    }
+  };
+
   // Leaderboard data calculation
   const leaderboard = [...filteredDevotees].map(d => ({
     ...d,
@@ -408,7 +443,7 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
             {selectedDevotee ? (
               <button onClick={() => setSelectedDevotee(null)} style={{ background: 'none', border: 'none', color: '#f59e0b', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 'bold', fontSize: '0.9rem' }}>
                 <ArrowLeft size={18} /> Back to Guide Portal
-              </button>
+              
             ) : (
               <img src={folkLogo} alt="FOLK Logo" style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover', boxShadow: '0 0 15px rgba(245,158,11,0.4)' }} />
             )}
@@ -417,7 +452,7 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
                 {selectedDevotee ? `Devotee Portal View: ${selectedDevotee.name}` : 'FOLK Guide Portal'}
               </h1>
               <p style={{ margin: 0, fontSize: '0.78rem', color: '#64748b' }}>
-                {currentUser.name} · {myDevotees.length} Total Devotees ({totalResidents} Residents, {totalNonResidents} Non-Residents, {totalBeginners} Beginners)
+                {currentUser.name} Â· {myDevotees.length} Total Devotees ({totalResidents} Residents, {totalNonResidents} Non-Residents, {totalBeginners} Beginners)
               </p>
             </div>
           </div>
@@ -426,12 +461,12 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
             {selectedDevotee && (
               <button onClick={() => downloadDevoteePDF(selectedDevotee)} style={{ padding: '0.55rem 1rem', borderRadius: '10px', border: 'none', background: 'rgba(16,185,129,0.15)', color: '#10b981', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem', fontFamily: 'inherit', fontSize: '0.85rem' }}>
                 <Download size={16} /> Download PDF
-              </button>
+              
             )}
 
             <button onClick={() => setShowLogoutConfirm(true)} style={{ padding: '0.55rem 1.2rem', borderRadius: '10px', border: 'none', background: 'rgba(239,68,68,0.15)', color: '#ef4444', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem', fontFamily: 'inherit', fontSize: '0.85rem' }}>
               <LogOut size={16} /> Logout
-            </button>
+            
 
             {/* Logout Confirm Dialog */}
             {showLogoutConfirm && (
@@ -453,13 +488,13 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
                     {notifications.filter(n => !clearedNotifs.includes(n.id)).length}
                   </span>
                 )}
-              </button>
+              
             </div>
           </div>
         </div>
       </header>
 
-      {/* ═══ CASCADING FILTER CONTROL BAR (Category First → If Resident, show Residency Filter) ═══ */}
+      {/* â•â•â• CASCADING FILTER CONTROL BAR (Category First â†’ If Resident, show Residency Filter) â•â•â• */}
       {!selectedDevotee && (
         <div style={{ background: 'rgba(15, 23, 42, 0.7)', borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '0.8rem 2rem' }}>
           <div style={{ maxWidth: '1400px', margin: '0 auto', display: 'flex', gap: '1.2rem', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -486,7 +521,7 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
               </select>
             </div>
 
-            {/* STEP 2: IF FOLK Resident selected → Show Residency Filter dropdown */}
+            {/* STEP 2: IF FOLK Resident selected â†’ Show Residency Filter dropdown */}
             {selectedStatus === 'FOLK Resident' && (
               <div className="animate-fade-in" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(16,185,129,0.1)', padding: '0.2rem 0.6rem', borderRadius: '8px', border: '1px solid rgba(16,185,129,0.3)' }}>
                 <span style={{ fontSize: '0.8rem', color: '#10b981', fontWeight: '700' }}>Select Residency:</span>
@@ -519,7 +554,7 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
                 fontFamily: 'inherit'
               }}>
                 <Icon size={15} /> {label}
-              </button>
+              
             ))}
           </div>
         </div>
@@ -527,7 +562,7 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
 
       <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '1.5rem 2rem 4rem' }}>
 
-        {/* ═══ DEVOTEE FULL APP VIEW (Guide can view ALL 5 TABS of the selected boy!) ═══ */}
+        {/* â•â•â• DEVOTEE FULL APP VIEW (Guide can view ALL 5 TABS of the selected boy!) â•â•â• */}
         {selectedDevotee && (
           <div className="animate-fade-in">
             {/* Guide Control Header for this boy */}
@@ -539,7 +574,7 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
                     Devotee Portal: {selectedDevotee.name}
                   </div>
                   <div style={{ color: '#94a3b8', fontSize: '0.78rem' }}>
-                    Category: <strong style={{ color: '#f59e0b' }}>{selectedDevotee.status}</strong> · Residency: {selectedDevotee.residency || 'Non-Resident'}
+                    Category: <strong style={{ color: '#f59e0b' }}>{selectedDevotee.status}</strong> Â· Residency: {selectedDevotee.residency || 'Non-Resident'}
                   </div>
                 </div>
               </div>
@@ -548,10 +583,10 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                 <button onClick={() => downloadDevoteePDF(selectedDevotee)} className="badge badge-emerald" style={{ padding: '0.5rem 0.8rem', cursor: 'pointer' }}>
                   <Download size={14} style={{ marginRight: '4px' }} /> PDF Report
-                </button>
+                
                 <button onClick={() => setSelectedDevotee(null)} className="badge badge-amber" style={{ padding: '0.5rem 0.8rem', cursor: 'pointer' }}>
-                  Exit Boy View
-                </button>
+Exit Boy View</button>
+                
               </div>
             </div>
 
@@ -560,19 +595,19 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
               <div className="tabs-container">
                 <button className={`tab-item ${devoteeTab === 'dashboard' ? 'active' : ''}`} onClick={() => setDevoteeTab('dashboard')}>
                   <Calendar size={16} /> 1. Analytics & Dashboard
-                </button>
+                
                 <button className={`tab-item ${devoteeTab === 'tracker' ? 'active' : ''}`} onClick={() => setDevoteeTab('tracker')}>
                   <Home size={16} /> 2. Sadhana Entry (Filling View)
-                </button>
+                
                 <button className={`tab-item ${devoteeTab === 'leaderboard' ? 'active' : ''}`} onClick={() => setDevoteeTab('leaderboard')}>
                   <Trophy size={16} /> 3. Leaderboard
-                </button>
+                
                 <button className={`tab-item ${devoteeTab === 'bucket' ? 'active' : ''}`} onClick={() => setDevoteeTab('bucket')}>
                   <CheckSquare size={16} /> 4. Bucket List
-                </button>
+                
                 <button className={`tab-item ${devoteeTab === 'timer' ? 'active' : ''}`} onClick={() => setDevoteeTab('timer')}>
-                  <Clock size={16} /> 5. Focus Timer
-                </button>
+                  
+                
               </div>
             </nav>
 
@@ -585,21 +620,21 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
           </div>
         )}
 
-        {/* ═══ OVERVIEW & ANALYTICS TAB ═══ */}
+        {/* â•â•â• OVERVIEW & ANALYTICS TAB â•â•â• */}
         {!selectedDevotee && activeTab === 'overview' && (
           <div className="animate-fade-in">
             {/* KPI Row */}
             <div className="guide-kpi-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
-              <StatCard label="Filtered Devotees" value={filteredDevotees.length} icon={Users} color="#f59e0b" sub={`${totalResidents} Residents · ${totalNonResidents} Non-Res · ${totalBeginners} Beginners`} />
+              <StatCard label="Filtered Devotees" value={filteredDevotees.length} icon={Users} color="#f59e0b" sub={`${totalResidents} Residents Â· ${totalNonResidents} Non-Res Â· ${totalBeginners} Beginners`} />
               <StatCard label="Group Avg Score" value={`${overallAvg}%`} icon={Star} color="#10b981" sub="30-day average score" />
-              <StatCard label="Top Performer" value={topPerformer?.name?.split(' ')[0] || '—'} icon={Award} color="#8b5cf6" sub={topPerformer ? `${topPerformer.avg}% avg score` : ''} />
+              <StatCard label="Top Performer" value={topPerformer?.name?.split(' ')[0] || 'â€”'} icon={Award} color="#8b5cf6" sub={topPerformer ? `${topPerformer.avg}% avg score` : ''} />
               <StatCard label="Active Residencies" value={residencies.length} icon={Building2} color="#3b82f6" sub={selectedResidency === 'all' ? 'All active residencies' : selectedResidency} />
             </div>
 
             {/* Charts Row */}
             <div className="guide-charts-row" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
               <div className="panel">
-                <h3 className="panel-title" style={{ marginBottom: '1.2rem' }}>📈 Group Average Score (Last 14 Days)</h3>
+                <h3 className="panel-title" style={{ marginBottom: '1.2rem' }}>ðŸ“ˆ Group Average Score (Last 14 Days)</h3>
                 <ResponsiveContainer width="100%" height={230}>
                   <AreaChart data={last14Days}>
                     <defs>
@@ -619,7 +654,7 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
 
               {/* Devotees Category Breakdown */}
               <div className="panel">
-                <h3 className="panel-title" style={{ marginBottom: '1.2rem' }}>📊 Boys Category Split</h3>
+                <h3 className="panel-title" style={{ marginBottom: '1.2rem' }}>ðŸ“Š Boys Category Split</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
                   {[
                     { label: 'FOLK Residents', count: totalResidents, color: '#10b981', total: myDevotees.length },
@@ -646,7 +681,7 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
             {/* Devotee Leaderboard */}
             <div className="panel">
               <div className="panel-header">
-                <h3 className="panel-title">🏆 Devotee Leaderboard ({filteredDevotees.length} Boys)</h3>
+                <h3 className="panel-title">ðŸ† Devotee Leaderboard ({filteredDevotees.length} Boys)</h3>
                 <span style={{ color: '#64748b', fontSize: '0.8rem' }}>Click any boy to view complete dashboard & report</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -662,7 +697,7 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
                     onMouseLeave={e => e.currentTarget.style.transform = 'translateX(0)'}
                   >
                     <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: `${RANK_COLORS[i % RANK_COLORS.length]}20`, display: 'flex', alignItems: 'center', justify: 'center', fontWeight: '800', color: RANK_COLORS[i % RANK_COLORS.length], fontSize: '0.9rem', flexShrink: 0 }}>
-                      {i < 3 ? ['🥇', '🥈', '🥉'][i] : `#${i + 1}`}
+                      {i < 3 ? ['ðŸ¥‡', 'ðŸ¥ˆ', 'ðŸ¥‰'][i] : `#${i + 1}`}
                     </div>
                     <div style={{ width: '36px', height: '36px', borderRadius: '50%', overflow: 'hidden', flexShrink: 0 }}>
                       <img src={d.photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${d.name}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -673,7 +708,7 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
                         <span className={`badge ${d.status === 'FOLK Resident' ? 'badge-emerald' : (d.status === 'Non-FOLK Resident' ? 'badge-blue' : 'badge-amber')}`} style={{ fontSize: '0.7rem', padding: '1px 6px' }}>
                           {d.status}
                         </span>
-                        {d.residency && ` • ${d.residency}`}
+                        {d.residency && ` â€¢ ${d.residency}`}
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
@@ -687,8 +722,8 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
                       </div>
                       <div style={{ textAlign: 'center' }}>
                         <button onClick={(e) => { e.stopPropagation(); downloadDevoteePDF(d); }} style={{ padding: '4px 8px', borderRadius: '6px', border: 'none', background: 'rgba(16,185,129,0.15)', color: '#10b981', cursor: 'pointer', fontSize: '0.7rem', fontWeight: 'bold', fontFamily: 'inherit' }}>
-                          PDF
-                        </button>
+PDF</button>
+                        
                       </div>
                     </div>
                   </div>
@@ -699,7 +734,7 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
           </div>
         )}
 
-        {/* ═══ DEVOTEE DIRECTORY TAB ═══ */}
+        {/* â•â•â• DEVOTEE DIRECTORY TAB â•â•â• */}
         {!selectedDevotee && activeTab === 'devotees' && (
           <div className="animate-fade-in">
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
@@ -726,8 +761,8 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
                     </div>
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.6rem 0 0 0', borderTop: '1px solid var(--border-subtle)' }}>
-                      <span style={{ fontSize: '0.78rem', color: '#3b82f6', fontWeight: '700' }}>🔥 {stats.streak}d Streak</span>
-                      <span style={{ fontSize: '0.78rem', color: '#10b981', fontWeight: '700', cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); downloadDevoteePDF(d); }}>📥 PDF Report</span>
+                      <span style={{ fontSize: '0.78rem', color: '#3b82f6', fontWeight: '700' }}>ðŸ”¥ {stats.streak}d Streak</span>
+                      <span style={{ fontSize: '0.78rem', color: '#10b981', fontWeight: '700', cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); downloadDevoteePDF(d); }}>ðŸ“¥ PDF Report</span>
                     </div>
                   </div>
                 );
@@ -736,14 +771,14 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
           </div>
         )}
 
-        {/* ═══ CAMPAIGN MANAGER TAB ═══ */}
+        {/* â•â•â• CAMPAIGN MANAGER TAB â•â•â• */}
         {!selectedDevotee && activeTab === 'campaigns' && (
           <div className="animate-fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
             {/* Create Campaign Panel */}
             <div className="panel">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                 <h3 className="panel-title" style={{ margin: 0, color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Flag size={20} /> Launch New Sādhana Campaign
+                  <Flag size={20} /> Launch New SÄdhana Campaign
                 </h3>
                 {/* 1-Click Ekadashi Preset Button */}
                 <button
@@ -751,7 +786,7 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
                   onClick={() => {
                     const todayStr = format(new Date(), 'yyyy-MM-dd');
                     setNewCampaign({
-                      title: '✨ Ekadashi Special 2X Sādhana Marathon',
+                      title: 'âœ¨ Ekadashi Special 2X SÄdhana Marathon',
                       festival: 'Ekadashi Mahotsav',
                       startDate: todayStr,
                       endDate: todayStr,
@@ -775,8 +810,8 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
                     display: 'flex', alignItems: 'center', gap: '0.3rem'
                   }}
                 >
-                  ⚡ Auto-Fill Ekadashi 2X Campaign
-                </button>
+                  âš¡ Auto-Fill Ekadashi 2X Campaign
+                
               </div>
 
               <form onSubmit={handleCreateCampaign} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -818,7 +853,7 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
                       Rules & Regulations (Auto-Parsed & Enforced)
                     </label>
                     <span style={{ fontSize: '0.72rem', color: '#10b981', fontWeight: '700' }}>
-                      ✨ Smart AI Intent Matcher Active
+                      âœ¨ Smart AI Intent Matcher Active
                     </span>
                   </div>
                   <textarea
@@ -833,19 +868,19 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
                   {newCampaign.rules.trim() !== '' && (
                     <div style={{ background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.25)', borderRadius: '10px', padding: '0.7rem', marginTop: '0.5rem', fontSize: '0.78rem' }}>
                       <div style={{ color: '#3b82f6', fontWeight: '800', marginBottom: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                        🧠 Smart System Translation (How the system executes your entry):
+                        ðŸ§  Smart System Translation (How the system executes your entry):
                       </div>
                       {newCampaign.rules.split('\n').filter(Boolean).map((line, i) => {
                         let parsedIntent = line;
                         const lower = line.toLowerCase();
                         if (lower.includes('16') && (lower.includes('7') || lower.includes('round'))) {
-                          parsedIntent = "🎯 Rule #" + (i+1) + ": Auto-Check Devotee Chanting (Target: 16 Rounds completed before 07:00 AM).";
+                          parsedIntent = "ðŸŽ¯ Rule #" + (i+1) + ": Auto-Check Devotee Chanting (Target: 16 Rounds completed before 07:00 AM).";
                         } else if (lower.includes('reading') || lower.includes('book')) {
-                          parsedIntent = "📚 Rule #" + (i+1) + ": Auto-Check Devotee Reading Duration (Target: 30+ Mins).";
+                          parsedIntent = "ðŸ“š Rule #" + (i+1) + ": Auto-Check Devotee Reading Duration (Target: 30+ Mins).";
                         } else if (lower.includes('mangala') || lower.includes('aarti')) {
-                          parsedIntent = "🌅 Rule #" + (i+1) + ": Auto-Check Mangala Aarti On-Time Attendance (4:30 AM).";
+                          parsedIntent = "ðŸŒ… Rule #" + (i+1) + ": Auto-Check Mangala Aarti On-Time Attendance (4:30 AM).";
                         } else {
-                          parsedIntent = "📋 Rule #" + (i+1) + ": " + line.replace(/^only\b/i, 'Minimum').replace(/\bround\b/i, 'rounds') + " (Auto-tracked in Leaderboard).";
+                          parsedIntent = "ðŸ“‹ Rule #" + (i+1) + ": " + line.replace(/^only\b/i, 'Minimum').replace(/\bround\b/i, 'rounds') + " (Auto-tracked in Leaderboard).";
                         }
                         return (
                           <div key={i} style={{ color: '#e2e8f0', marginLeft: '0.5rem', marginBottom: '0.2rem' }}>
@@ -861,7 +896,7 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
                 <div style={{ background: 'rgba(16, 185, 129, 0.06)', border: '1px solid rgba(16, 185, 129, 0.25)', borderRadius: '12px', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <h4 style={{ margin: 0, color: '#10b981', fontSize: '0.9rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      ✨ Ekadashi 2X Points Multiplier (Special Bonus)
+                      âœ¨ Ekadashi 2X Points Multiplier (Special Bonus)
                     </h4>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: '#10b981', cursor: 'pointer', fontWeight: '700' }}>
                       <input type="checkbox" checked={newCampaign.enableEkadashi2x} onChange={e => setNewCampaign({ ...newCampaign, enableEkadashi2x: e.target.checked })} />
@@ -887,29 +922,29 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', marginBottom: '0.2rem', color: '#FFD700', fontSize: '0.78rem', fontWeight: '700' }}>🥇 1st Position Prize (Optional)</label>
+                    <label style={{ display: 'block', marginBottom: '0.2rem', color: '#FFD700', fontSize: '0.78rem', fontWeight: '700' }}>ðŸ¥‡ 1st Position Prize (Optional)</label>
                     <input type="text" className="form-control" value={newCampaign.prize1st} onChange={e => setNewCampaign({ ...newCampaign, prize1st: e.target.value })} placeholder="e.g. Srila Prabhupada 30-Vol Book Set + Deity Lamp (Optional)" />
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', marginBottom: '0.2rem', color: '#C0C0C0', fontSize: '0.78rem', fontWeight: '700' }}>🥈 2nd Position Prize (Optional)</label>
+                    <label style={{ display: 'block', marginBottom: '0.2rem', color: '#C0C0C0', fontSize: '0.78rem', fontWeight: '700' }}>ðŸ¥ˆ 2nd Position Prize (Optional)</label>
                     <input type="text" className="form-control" value={newCampaign.prize2nd} onChange={e => setNewCampaign({ ...newCampaign, prize2nd: e.target.value })} placeholder="e.g. Wooden Japa Mala Bag (Optional)" />
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', marginBottom: '0.2rem', color: '#CD7F32', fontSize: '0.78rem', fontWeight: '700' }}>🥉 3rd Position Prize (Optional)</label>
+                    <label style={{ display: 'block', marginBottom: '0.2rem', color: '#CD7F32', fontSize: '0.78rem', fontWeight: '700' }}>ðŸ¥‰ 3rd Position Prize (Optional)</label>
                     <input type="text" className="form-control" value={newCampaign.prize3rd} onChange={e => setNewCampaign({ ...newCampaign, prize3rd: e.target.value })} placeholder="e.g. Devotional Journal (Optional)" />
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', marginBottom: '0.2rem', color: '#94a3b8', fontSize: '0.78rem', fontWeight: '700' }}>🏅 Consolation / Top 10 Reward (Optional)</label>
+                    <label style={{ display: 'block', marginBottom: '0.2rem', color: '#94a3b8', fontSize: '0.78rem', fontWeight: '700' }}>ðŸ… Consolation / Top 10 Reward (Optional)</label>
                     <input type="text" className="form-control" value={newCampaign.prizeConsolation} onChange={e => setNewCampaign({ ...newCampaign, prizeConsolation: e.target.value })} placeholder="e.g. Special Certificate of Excellence & Mahaprasadam" />
                   </div>
                 </div>
 
                 <button type="submit" style={{ padding: '0.9rem', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg, #f59e0b, #ea580c)', color: '#fff', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontFamily: 'inherit', fontSize: '0.95rem' }}>
                   <Flag size={18} /> Launch Campaign & Send Invitations
-                </button>
+                
               </form>
             </div>
 
@@ -948,21 +983,21 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.8rem', gap: '0.5rem' }}>
                           <div>
                             <span style={{ fontSize: '0.74rem', color: '#f59e0b', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                              🏆 {c.festival || 'Festival Campaign'}
+                              ðŸ† {c.festival || 'Festival Campaign'}
                             </span>
                             <h4 style={{ margin: '0.2rem 0 0 0', color: 'var(--text-main)', fontSize: '1.15rem', fontWeight: '800' }}>
                               {c.title}
                             </h4>
                           </div>
                           <span className={`badge ${isCompleted ? 'badge-blue' : 'badge-emerald'}`} style={{ fontSize: '0.8rem', padding: '4px 10px' }}>
-                            {isCompleted ? '🏁 Completed' : '🔥 Ongoing Active'}
+                            {isCompleted ? 'ðŸ Completed' : 'ðŸ”¥ Ongoing Active'}
                           </span>
                         </div>
 
                         {/* Acceptance Ratio Progress Bar */}
                         <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '0.8rem', marginBottom: '1rem' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', marginBottom: '0.4rem' }}>
-                            <span style={{ color: 'var(--text-main)', fontWeight: '700' }}>📊 Devotee Acceptance Ratio:</span>
+                            <span style={{ color: 'var(--text-main)', fontWeight: '700' }}>ðŸ“Š Devotee Acceptance Ratio:</span>
                             <span style={{ color: '#10b981', fontWeight: '800' }}>
                               {enrolledCount} / {totalTargetCount} Boys Enrolled ({acceptanceRatio}%)
                             </span>
@@ -974,30 +1009,30 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
 
                         {/* Dates & Ekadashi info */}
                         <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginBottom: '0.8rem', display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
-                          <span>📅 Dates: <strong>{c.startDate ? format(new Date(c.startDate), 'dd MMM yyyy') : 'Now'}</strong> to <strong>{c.endDate ? format(new Date(c.endDate), 'dd MMM yyyy') : 'TBD'}</strong></span>
-                          {c.enableEkadashi2x && <span style={{ color: '#10b981', fontWeight: '700' }}>✨ Ekadashi 2X Multiplier Active</span>}
+                          <span>ðŸ“… Dates: <strong>{c.startDate ? format(new Date(c.startDate), 'dd MMM yyyy') : 'Now'}</strong> to <strong>{c.endDate ? format(new Date(c.endDate), 'dd MMM yyyy') : 'TBD'}</strong></span>
+                          {c.enableEkadashi2x && <span style={{ color: '#10b981', fontWeight: '700' }}>âœ¨ Ekadashi 2X Multiplier Active</span>}
                         </div>
 
                         {/* Rules */}
                         {c.rules && (
                           <div style={{ background: 'rgba(0,0,0,0.25)', padding: '0.7rem', borderRadius: '10px', marginBottom: '0.8rem', fontSize: '0.78rem', color: '#cbd5e1' }}>
-                            <strong style={{ color: '#f59e0b' }}>📋 Rules & Regulations:</strong>
+                            <strong style={{ color: '#f59e0b' }}>ðŸ“‹ Rules & Regulations:</strong>
                             <div style={{ whiteSpace: 'pre-line', marginTop: '0.2rem' }}>{c.rules}</div>
                           </div>
                         )}
 
                         {/* Position Prizes List */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', fontSize: '0.78rem', marginBottom: '1rem', background: 'rgba(245,158,11,0.06)', padding: '0.7rem', borderRadius: '10px' }}>
-                          {c.prize1st && <div style={{ color: '#FFD700', fontWeight: '700' }}>🥇 1st: {c.prize1st}</div>}
-                          {c.prize2nd && <div style={{ color: '#C0C0C0', fontWeight: '700' }}>🥈 2nd: {c.prize2nd}</div>}
-                          {c.prize3rd && <div style={{ color: '#CD7F32', fontWeight: '700' }}>🥉 3rd: {c.prize3rd}</div>}
-                          {c.prizeConsolation && <div style={{ color: '#94a3b8', fontWeight: '600' }}>🏅 Consolation: {c.prizeConsolation}</div>}
+                          {c.prize1st && <div style={{ color: '#FFD700', fontWeight: '700' }}>ðŸ¥‡ 1st: {c.prize1st}</div>}
+                          {c.prize2nd && <div style={{ color: '#C0C0C0', fontWeight: '700' }}>ðŸ¥ˆ 2nd: {c.prize2nd}</div>}
+                          {c.prize3rd && <div style={{ color: '#CD7F32', fontWeight: '700' }}>ðŸ¥‰ 3rd: {c.prize3rd}</div>}
+                          {c.prizeConsolation && <div style={{ color: '#94a3b8', fontWeight: '600' }}>ðŸ… Consolation: {c.prizeConsolation}</div>}
                         </div>
 
                         {/* Live Campaign Standings Leaderboard */}
                         <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '0.8rem' }}>
                           <h5 style={{ margin: '0 0 0.6rem 0', color: 'var(--text-main)', fontSize: '0.88rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                            <Trophy size={16} color="#f59e0b" /> {isCompleted ? '🏁 Final Campaign Winners' : '🔥 Live Campaign Standings'} ({campLeaderboard.length} Boys)
+                            <Trophy size={16} color="#f59e0b" /> {isCompleted ? 'ðŸ Final Campaign Winners' : 'ðŸ”¥ Live Campaign Standings'} ({campLeaderboard.length} Boys)
                           </h5>
 
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
@@ -1009,18 +1044,18 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
                                 border: `1px solid ${idx < 3 ? ['#FFD700', '#C0C0C0', '#CD7F32'][idx] + '40' : 'transparent'}`
                               }}>
                                 <span style={{ fontSize: '0.9rem', fontWeight: '800', width: '22px' }}>
-                                  {idx < 3 ? ['🥇', '🥈', '🥉'][idx] : `#${idx + 1}`}
+                                  {idx < 3 ? ['ðŸ¥‡', 'ðŸ¥ˆ', 'ðŸ¥‰'][idx] : `#${idx + 1}`}
                                 </span>
                                 <div style={{ width: '28px', height: '28px', borderRadius: '50%', overflow: 'hidden', flexShrink: 0 }}>
                                   <img src={d.photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${d.name}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                 </div>
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                   <div style={{ fontWeight: '700', fontSize: '0.82rem', color: 'var(--text-main)' }}>{d.name}</div>
-                                  <div style={{ fontSize: '0.7rem', color: '#64748b' }}>{d.status} {d.residency && `· ${d.residency}`}</div>
+                                  <div style={{ fontSize: '0.7rem', color: '#64748b' }}>{d.status} {d.residency && `Â· ${d.residency}`}</div>
                                 </div>
                                 <div style={{ textAlign: 'right' }}>
                                   <div style={{ fontWeight: '800', fontSize: '0.9rem', color: SCORE_COLOR(d.avg) }}>{d.avg}%</div>
-                                  <div style={{ fontSize: '0.68rem', color: '#3b82f6' }}>🔥 {d.streak}d streak</div>
+                                  <div style={{ fontSize: '0.68rem', color: '#3b82f6' }}>ðŸ”¥ {d.streak}d streak</div>
                                 </div>
                               </div>
                             ))}
@@ -1037,7 +1072,7 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
           </div>
         )}
 
-        {/* ═══ PUSH TO BUCKET LIST TAB ═══ */}
+        {/* â•â•â• PUSH TO BUCKET LIST TAB â•â•â• */}
         {!selectedDevotee && activeTab === 'push_bucket' && (
           <div className="animate-fade-in" style={{ maxWidth: '650px', margin: '0 auto' }}>
             <div className="panel">
@@ -1045,7 +1080,7 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
                 <CheckSquare size={20} /> Assign Task to Devotees' Bucket List
               </h3>
               <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
-                Assigned tasks will appear directly in the selected boy(s) Bucket List marked with a ⭐ <strong>PRIORITY — Assigned by Guide</strong> badge.
+                Assigned tasks will appear directly in the selected boy(s) Bucket List marked with a â­ <strong>PRIORITY â€” Assigned by Guide</strong> badge.
               </p>
 
               <form onSubmit={handlePushBucketItem} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
@@ -1097,9 +1132,9 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
                 <div>
                   <label style={{ display: 'block', marginBottom: '0.4rem', color: 'var(--text-muted)', fontSize: '0.82rem', fontWeight: '600' }}>Bucket List Section</label>
                   <select className="form-control" value={bucketCategory} onChange={e => setBucketCategory(e.target.value)}>
-                    <option value="seva">🙏 Seva Goals (To-Do List)</option>
-                    <option value="topics">📖 Philosophical Topics Section</option>
-                    <option value="books">📚 Book Reading Section</option>
+                    <option value="seva">ðŸ™ Seva Goals (To-Do List)</option>
+                    <option value="topics">ðŸ“– Philosophical Topics Section</option>
+                    <option value="books">ðŸ“š Book Reading Section</option>
                   </select>
                 </div>
 
@@ -1115,13 +1150,13 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
 
                 <button type="submit" style={{ padding: '0.9rem', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg, #8b5cf6, #6d28d9)', color: '#fff', fontWeight: '800', fontSize: '1rem', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
                   <CheckSquare size={18} /> Push Priority Task to Bucket List
-                </button>
+                
               </form>
             </div>
           </div>
         )}
 
-        {/* ═══ TARGETED BROADCAST TAB ═══ */}
+        {/* â•â•â• TARGETED BROADCAST TAB â•â•â• */}
         {!selectedDevotee && activeTab === 'targeted_msg' && (
           <div className="animate-fade-in" style={{ maxWidth: '650px', margin: '0 auto' }}>
             <div className="panel">
@@ -1182,24 +1217,24 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
 
                 <button type="submit" style={{ padding: '0.9rem', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)', color: '#fff', fontWeight: '800', fontSize: '1rem', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
                   <Send size={18} /> Send Broadcast Message
-                </button>
+                
               </form>
             </div>
           </div>
         )}
 
-        {/* ═══ RESIDENCIES TAB ═══ */}
+        {/* â•â•â• RESIDENCIES TAB â•â•â• */}
         {!selectedDevotee && activeTab === 'residencies' && (
           <div className="campaign-split animate-fade-in" style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem' }}>
             <div className="panel">
-              <h3 className="panel-title" style={{ marginBottom: '1.2rem', color: '#f59e0b' }}>🏠 Create New Residency</h3>
+              <h3 className="panel-title" style={{ marginBottom: '1.2rem', color: '#f59e0b' }}>ðŸ  Create New Residency</h3>
               <form onSubmit={handleCreateResidency} style={{ display: 'flex', gap: '0.8rem' }}>
                 <input type="text" className="form-control" value={newResidencyName} onChange={e => setNewResidencyName(e.target.value)} required placeholder="e.g. FOLK PDPU" />
                 <button type="submit" style={{ padding: '0 1.2rem', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, #f59e0b, #ea580c)', color: '#fff', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit', fontWeight: '700' }}>Create</button>
               </form>
             </div>
             <div className="panel">
-              <h3 className="panel-title" style={{ marginBottom: '1rem' }}>🏢 Active Residencies</h3>
+              <h3 className="panel-title" style={{ marginBottom: '1rem' }}>ðŸ¢ Active Residencies</h3>
               {residencies.map(r => (
                 <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.85rem 1rem', background: 'var(--bg-input)', borderRadius: '10px', marginBottom: '0.5rem' }}>
                   <div>
@@ -1207,7 +1242,7 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
                     <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{myDevotees.filter(d => d.residency === r.name).length} assigned devotees</div>
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button onClick={() => setEditingResidency(r)} className="btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem', borderRadius: '6px' }}>⚙️ Edit Settings</button>
+                    <button onClick={() => setEditingResidency(r)} className="btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem', borderRadius: '6px' }}>âš™ï¸ Edit Settings</button>
                   </div>
                 </div>
               ))}
@@ -1234,7 +1269,7 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
           <img src={iskconLogo} alt="ISKCON Logo" style={{ height: '42px', objectFit: 'contain', borderRadius: '8px' }} />
         </div>
         <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.8rem', textAlign: 'center' }}>
-          © 2026 All rights reserved | ISKCON Bhadaj, Ahmedabad | Managed by FOLK
+          Â© 2026 All rights reserved | ISKCON Bhadaj, Ahmedabad | Managed by FOLK
         </p>
       </footer>
 
@@ -1245,7 +1280,7 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
           <div onClick={e => e.stopPropagation()} className="animate-fade-in" style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '90vw', maxWidth: '350px', background: 'var(--bg-card)', border: '1px solid var(--border-highlight)', borderRadius: '16px', padding: '1.2rem', boxShadow: '0 15px 35px rgba(0,0,0,0.7)', zIndex: 9999, display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: '80vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ margin: 0, fontSize: '1rem', color: 'var(--primary-amber)' }}>Notifications</h3>
-              <button onClick={() => setShowNotifications(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={16} /></button>
+              <button onClick={() => setShowNotifications(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={16} />
             </div>
             
             {notifications.filter(n => !clearedNotifs.includes(n.id)).length === 0 ? (
@@ -1263,7 +1298,7 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
                 ))}
                 <button onClick={handleClearNotifications} className="nav-btn btn-secondary" style={{ width: '100%', marginTop: '0.5rem', padding: '0.5rem', fontSize: '0.85rem' }}>
                   <CheckCircle size={14} /> Mark All as Read
-                </button>
+                
               </div>
             )}
           </div>
@@ -1277,9 +1312,71 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
           onSave={handleUpdateResidencyConfig} 
         />
       )}
+      {/* â•â•â• REDEMPTIONS TAB â•â•â• */}
+      {!selectedDevotee && activeTab === 'redemptions' && (
+        <div className="animate-fade-in panel">
+          <h3 className="panel-title" style={{ marginBottom: '1.2rem', color: '#f59e0b' }}>ðŸŽ Devotee Redemption Requests</h3>
+          
+          {redemptions.length === 0 ? (
+            <p style={{ color: 'var(--text-muted)', textAlign: 'center', margin: '2rem 0' }}>No redemption requests from your devotees yet.</p>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--border-subtle)', textAlign: 'left', color: 'var(--text-muted)' }}>
+                    <th style={{ padding: '1rem' }}>Date</th>
+                    <th style={{ padding: '1rem' }}>Devotee</th>
+                    <th style={{ padding: '1rem' }}>Request</th>
+                    <th style={{ padding: '1rem' }}>Status</th>
+                    <th style={{ padding: '1rem' }}>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {redemptions.map(r => (
+                    <tr key={r.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <td style={{ padding: '1rem', color: 'var(--text-muted)' }}>{format(new Date(r.date), 'dd MMM yyyy, h:mm a')}</td>
+                      <td style={{ padding: '1rem', fontWeight: 'bold' }}>{r.name}</td>
+                      <td style={{ padding: '1rem' }}>
+                        <span style={{ color: r.type === 'Chaitanya' ? '#fbbf24' : r.type === 'Nityanand' ? '#60a5fa' : '#f97316', fontWeight: 'bold' }}>
+                          {r.amount} {r.type}
+                        </span>
+                        <br />
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>for {r.category}</span>
+                      </td>
+                      <td style={{ padding: '1rem' }}>
+                        <span className={`badge ${r.status === 'approved' ? 'badge-emerald' : r.status === 'rejected' ? 'badge-rose' : 'badge-amber'}`}>
+                          {r.status.toUpperCase()}
+                        </span>
+                      </td>
+                      <td style={{ padding: '1rem' }}>
+                        {r.status === 'pending' ? (
+                          <div style={{ display: 'flex', gap: '5px', flexDirection: 'column' }}>
+                            <input 
+                              type="text" 
+                              placeholder="Add remark (optional)" 
+                              className="input-field" 
+                              style={{ padding: '0.4rem', fontSize: '0.8rem', width: '180px' }}
+                              onChange={(e) => setRedemptionRemark(e.target.value)}
+                            />
+                            <div style={{ display: 'flex', gap: '5px' }}>
+                              <button onClick={() => handleUpdateRedemption(r.id, 'approved')} className="btn-primary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', background: '#10b981', border: 'none', color: '#fff', borderRadius: '4px', cursor: 'pointer' }}>Approve</button>
+                              <button onClick={() => handleUpdateRedemption(r.id, 'rejected')} className="btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', background: '#ef4444', border: 'none', color: '#fff', borderRadius: '4px', cursor: 'pointer' }}>Reject</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{r.remarks}</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
 
 export default GuideDashboard;
-

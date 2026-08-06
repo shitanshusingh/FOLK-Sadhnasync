@@ -1,10 +1,12 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Download, ChevronLeft, ChevronRight, User, AlertCircle, Flame, Target, X, CheckCircle, Clock, Edit3, Activity, Trophy, BookOpen } from 'lucide-react';
+import { Download, ChevronLeft, ChevronRight, User, AlertCircle, Flame, Target, X, CheckCircle, Clock, Edit3, Activity, Trophy, BookOpen, Star, Zap } from 'lucide-react';
 import { format, parseISO, isWithinInterval, subDays, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, isBefore, isAfter, differenceInDays, startOfToday, startOfYear, endOfYear, differenceInMinutes } from 'date-fns';
 import { calculatePoints, getAbsentCode } from '../utils/scoring';
+import StoryViewer from './StoryViewer';
 import { generateSadhanaPDFReport } from '../utils/pdfGenerator';
 import { isCloudActive, cloudSaveUser } from '../services/firebase';
+import { calculateUserCurrencies, getPrestigeTitle } from '../utils/currency';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell } from 'recharts';
 
 const Dashboard = ({ currentUser, setActiveTab, setPrefilledDate }) => {
@@ -628,17 +630,18 @@ const Dashboard = ({ currentUser, setActiveTab, setPrefilledDate }) => {
     }
     
     const active = [];
+    const twoDaysAgoStr = format(subDays(today, 2), 'yyyy-MM-dd');
+
     for (const u of matchedUsers) {
        const userHistory = JSON.parse(localStorage.getItem(`sadhana_history_${u.email}`) || '[]');
        const todayEntry = userHistory.find(e => e.date === todayStr);
        const yesterdayEntry = userHistory.find(e => e.date === yesterdayStr);
+       const twoDaysAgoEntry = userHistory.find(e => e.date === twoDaysAgoStr);
        
-       const latestEntry = (todayEntry && todayEntry.score > 0) ? todayEntry 
-                         : (yesterdayEntry && yesterdayEntry.score > 0) ? yesterdayEntry 
-                         : null;
+       const recentEntries = [twoDaysAgoEntry, yesterdayEntry, todayEntry].filter(e => e && e.score > 0);
 
-       if (latestEntry) {
-          active.push({ user: u, entry: latestEntry });
+       if (recentEntries.length > 0) {
+          active.push({ user: u, entries: recentEntries, latest: recentEntries[recentEntries.length - 1] });
        }
     }
     
@@ -652,7 +655,7 @@ const Dashboard = ({ currentUser, setActiveTab, setPrefilledDate }) => {
       if (!aViewed && bViewed) return -1;
       if (aViewed && !bViewed) return 1;
       
-      return b.entry.score - a.entry.score;
+      return b.latest.score - a.latest.score;
     });
   }, [currentUser, todayStr, yesterdayStr, viewedStories]);
 
@@ -1290,6 +1293,41 @@ const Dashboard = ({ currentUser, setActiveTab, setPrefilledDate }) => {
               <span style={{ fontSize: '1.1rem', fontWeight: '900', color: '#6366f1' }}>{overallSadhanaBreakdown.readingTimeStr}</span>
             </div>
           </div>
+
+          {/* Smart Insights */}
+          {history.length > 0 && (() => {
+            let insight = "";
+            const mangalaMisses = history.filter(h => !h.activityTimes?.mangala_arati);
+            if (mangalaMisses.length > 2) {
+              const missedDays = mangalaMisses.map(h => new Date(h.date).getDay());
+              const commonDay = missedDays.sort((a,b) => missedDays.filter(v => v===a).length - missedDays.filter(v => v===b).length).pop();
+              const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+              insight = `You tend to miss Mangala Arati on ${days[commonDay]}s. Try planning ahead!`;
+            } else {
+              let sumRounds = 0;
+              history.forEach(h => sumRounds += Number(h.details?.totalRounds || 0));
+              const avgJapa = sumRounds / history.length;
+              if (avgJapa >= 16) {
+                insight = "Excellent! You are consistently chanting 16+ rounds. Keep it up!";
+              } else if (avgJapa >= 8) {
+                insight = "You are doing great! Try to gradually increase your daily Japa rounds to reach 16.";
+              } else {
+                insight = "Consistency is key. Focus on completing your daily reading and chanting goals.";
+              }
+            }
+
+            return (
+              <div style={{ marginTop: '1rem', padding: '1rem', background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(109, 40, 217, 0.1))', border: '1px solid rgba(139, 92, 246, 0.3)', borderRadius: '12px', display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <div style={{ padding: '8px', background: 'rgba(139, 92, 246, 0.2)', borderRadius: '50%' }}>
+                  <Star size={16} color="#c4b5fd" />
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: '#c4b5fd', fontWeight: 'bold', textTransform: 'uppercase' }}>Smart Insight</div>
+                  <div style={{ fontSize: '0.9rem', color: '#f8fafc', marginTop: '2px' }}>{insight}</div>
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         <div className="table-responsive">
@@ -1414,58 +1452,13 @@ const Dashboard = ({ currentUser, setActiveTab, setPrefilledDate }) => {
       )}
 
       {/* WhatsApp Status Modal */}
-      {feedModalUser && (() => {
-        const modalIsViewed = viewedStories.includes(feedModalUser.user.email);
-        const modalRingColor = modalIsViewed ? 'linear-gradient(45deg, #94a3b8 0%, #64748b 100%)' : 'linear-gradient(45deg, #10b981 0%, #059669 100%)';
-        const attendedMA = feedModalUser.entry.activityTimes?.mangala_arati ? 'Yes' : 'No';
-
-        return createPortal(
-          <div style={{ position: 'fixed', inset: 0, zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)' }} onClick={() => setFeedModalUser(null)}>
-            <div className="animate-fade-in" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '24px', width: '100%', maxWidth: '360px', padding: '2rem', position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }} onClick={e => e.stopPropagation()}>
-              <button onClick={() => setFeedModalUser(null)} style={{ position: 'absolute', top: '15px', right: '15px', background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                <X size={18} />
-              </button>
-              
-              <div style={{ width: '90px', height: '90px', borderRadius: '50%', padding: '4px', background: modalRingColor, marginBottom: '1rem' }}>
-                <div style={{ width: '100%', height: '100%', borderRadius: '50%', border: '3px solid var(--bg-card)', overflow: 'hidden', background: 'var(--bg-input)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', fontWeight: 'bold' }}>
-                  {feedModalUser.user.photo ? <img src={feedModalUser.user.photo} alt="Avatar" style={{width:'100%', height:'100%', objectFit:'cover'}} /> : feedModalUser.user.name.substring(0,2).toUpperCase()}
-                </div>
-              </div>
-              
-              <h3 style={{ margin: '0 0 5px 0', fontSize: '1.4rem', color: 'var(--text-main)', fontWeight: '800' }}>{feedModalUser.user.name}</h3>
-              <p style={{ margin: '0 0 1.5rem 0', color: 'var(--primary-amber)', fontWeight: '600', fontSize: '0.9rem' }}>{format(parseISO(feedModalUser.entry.date), 'do MMM')} Sādhana Complete! 🎉</p>
-              
-              <div style={{ width: '100%', background: 'rgba(0,0,0,0.2)', borderRadius: '16px', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}><Clock size={14} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }}/>Wake Up Time</span>
-                  <span style={{ fontWeight: '800', color: '#8b5cf6', fontSize: '1.1rem' }}>{feedModalUser.entry.details?.wakeupTime || '--'}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}><Clock size={14} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }}/>Sleep Time</span>
-                  <span style={{ fontWeight: '800', color: '#6366f1', fontSize: '1.1rem' }}>{feedModalUser.entry.details?.sleepTime || '--'}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}><Flame size={14} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }}/>Mangala Arati</span>
-                  <span style={{ fontWeight: '800', color: attendedMA === 'Yes' ? '#10b981' : '#f43f5e', fontSize: '1.1rem' }}>{attendedMA}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}><CheckCircle size={14} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }}/>Total Chanting</span>
-                  <span style={{ fontWeight: '800', color: '#10b981', fontSize: '1.1rem' }}>{feedModalUser.entry.details?.totalRounds || 0} rounds</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}><Activity size={14} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }}/>Japa Completed</span>
-                  <span style={{ fontWeight: '800', color: '#10b981', fontSize: '1.1rem' }}>{feedModalUser.entry.details?.chantingCompletionTime || '--'}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}><BookOpen size={14} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }}/>Total Reading</span>
-                  <span style={{ fontWeight: '800', color: '#3b82f6', fontSize: '1.1rem' }}>{feedModalUser.entry.details?.readingDuration || 0}m</span>
-                </div>
-              </div>
-            </div>
-          </div>,
-          document.body
-        );
-      })()}
+      {feedModalUser && (
+        <StoryViewer 
+          feedUser={feedModalUser} 
+          currentUser={currentUser}
+          onClose={() => setFeedModalUser(null)} 
+        />
+      )}
       
       {showNotificationsModal && activeNotification && typeof document !== 'undefined' && createPortal(
         <div style={{ position: 'fixed', inset: 0, zIndex: 99999, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
