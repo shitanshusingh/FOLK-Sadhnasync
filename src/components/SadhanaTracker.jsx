@@ -1,3 +1,4 @@
+import { ChaitanyaCoinIcon, NityanandCoinIcon, PrabhupadaCoinIcon } from './CoinIcons';
 import { useState, useEffect, useRef } from 'react';
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, startOfToday, differenceInDays, subDays } from 'date-fns';
 import { Save, AlertTriangle, User, Lock, Unlock, Flame, Star, Zap } from 'lucide-react';
@@ -51,6 +52,7 @@ const SadhanaTracker = ({ currentUser, prefilledDate }) => {
   const [saveStatus, setSaveStatus] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [earnedCoins, setEarnedCoins] = useState(null);
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
 
   const [isLocked, setIsLocked] = useState(false);
   const [unlockRequested, setUnlockRequested] = useState(false);
@@ -217,15 +219,22 @@ const SadhanaTracker = ({ currentUser, prefilledDate }) => {
     // Sync Sādhana entry to Cloud DB
     cloudSaveSadhanaLog(currentUser.email, newEntry);
     setSaveStatus('Saved successfully!');
-    setTimeout(() => setSaveStatus(''), 3000);
     
     // Check if coins were earned
     const coins = calculateDailyCoins(newEntry);
     if (coins.chaitanya || coins.nityanand || coins.prabhupada) {
       localStorage.setItem('hasNewCurrency', 'true');
       setEarnedCoins(coins);
-      setTimeout(() => setEarnedCoins(null), 5000);
+    } else {
+      setEarnedCoins(null);
     }
+    
+    if (typeof window !== 'undefined' && window.navigator && window.navigator.vibrate) {
+      try { window.navigator.vibrate([30, 20, 30]); } catch(e) {}
+    }
+
+    setShowSubmitModal(true);
+    setTimeout(() => { setShowSubmitModal(false); setSaveStatus(''); }, 4500);
     
     window.dispatchEvent(new Event('storage'));
   };
@@ -248,46 +257,81 @@ const SadhanaTracker = ({ currentUser, prefilledDate }) => {
   };
 
   return (
-    <div className="animate-fade-in" style={{ paddingBottom: '4rem' }}>
+    <div style={{ paddingBottom: '4rem' }}>
       
-      {/* Coin Earned Popup Modal */}
-      {earnedCoins && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(5px)', animation: 'fade-in 0.3s ease-out' }}>
-          <div style={{ background: 'var(--bg-card)', padding: '2rem', borderRadius: '24px', textAlign: 'center', border: '1px solid var(--border-highlight)', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)', transform: 'scale(1)', animation: 'pop-in 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)' }}>
-            <h2 style={{ margin: '0 0 1rem 0', color: '#fff', fontSize: '1.8rem' }}>Currency Earned!</h2>
-            <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', marginBottom: '1.5rem' }}>
-              {earnedCoins.chaitanya > 0 && (
-                <div style={{ animation: 'bounce 1s infinite' }}>
-                  <div style={{ width: '80px', height: '80px', background: 'linear-gradient(135deg, #fbbf24, #d97706)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 0.5rem', boxShadow: '0 10px 25px rgba(251,191,36,0.5)', border: '4px solid #fef3c7' }}>
-                    <Star size={40} color="#fff" />
-                  </div>
-                  <div style={{ fontWeight: 'bold', color: '#fbbf24' }}>+1 Chaitanya</div>
-                </div>
-              )}
-              {earnedCoins.nityanand > 0 && (
-                <div style={{ animation: 'bounce 1s infinite', animationDelay: '0.1s' }}>
-                  <div style={{ width: '80px', height: '80px', background: 'linear-gradient(135deg, #60a5fa, #3b82f6)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 0.5rem', boxShadow: '0 10px 25px rgba(59,130,246,0.5)', border: '4px solid #eff6ff' }}>
-                    <div style={{ width: '30px', height: '30px', background: '#fff', borderRadius: '50%' }} />
-                  </div>
-                  <div style={{ fontWeight: 'bold', color: '#60a5fa' }}>+1 Nityanand</div>
-                </div>
-              )}
-              {earnedCoins.prabhupada > 0 && (
-                <div style={{ animation: 'bounce 1s infinite', animationDelay: '0.2s' }}>
-                  <div style={{ width: '80px', height: '80px', background: 'linear-gradient(135deg, #f97316, #ea580c)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 0.5rem', boxShadow: '0 10px 25px rgba(234,88,12,0.5)', border: '4px solid #ffedd5' }}>
-                    <Zap size={40} color="#fff" />
-                  </div>
-                  <div style={{ fontWeight: 'bold', color: '#f97316' }}>+1 Prabhupada</div>
-                </div>
-              )}
+            {/* Always Centered Floating Submission Modal Overlay */}
+      {showSubmitModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(5, 8, 15, 0.85)', backdropFilter: 'blur(8px)' }}>
+          <div style={{ background: '#0f172a', padding: '2rem 1.8rem', borderRadius: '24px', textAlign: 'center', border: '1px solid rgba(245, 158, 11, 0.4)', boxShadow: '0 25px 60px rgba(0, 0, 0, 0.9), 0 0 30px rgba(245, 158, 11, 0.2)', maxWidth: '420px', width: '90vw' }}>
+            
+            <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'linear-gradient(135deg, #10b981, #059669)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem', boxShadow: '0 0 20px rgba(16, 185, 129, 0.4)', color: '#fff' }}>
+              <CheckCircle size={36} />
             </div>
-            <p style={{ margin: 0, color: 'var(--text-muted)' }}>Wallet updated automatically.</p>
+
+            <h2 style={{ margin: '0 0 0.4rem 0', color: '#f8fafc', fontSize: '1.5rem', fontFamily: 'Outfit, sans-serif', fontWeight: '800' }}>
+              Sādhana Logged!
+            </h2>
+            
+            <div style={{ fontSize: '1.2rem', fontWeight: '800', color: '#f59e0b', margin: '0.4rem 0 1rem' }}>
+              Score Earned: {score} / {maxScore} Points
+            </div>
+
+            {/* Coins Section */}
+            {earnedCoins && (earnedCoins.chaitanya > 0 || earnedCoins.nityanand > 0 || earnedCoins.prabhupada > 0) ? (
+              <div style={{ background: 'rgba(255, 255, 255, 0.04)', borderRadius: '16px', padding: '1rem', marginBottom: '1.2rem', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <div style={{ fontSize: '0.78rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: '700', marginBottom: '0.6rem' }}>
+                  🎉 Reward Coins Earned!
+                </div>
+                <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                  {earnedCoins.chaitanya > 0 && (
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ margin: '0 auto 0.3rem', display: 'flex', justifyContent: 'center' }}>
+                        <ChaitanyaCoinIcon size={46} />
+                      </div>
+                      <div style={{ fontWeight: '800', color: '#fbbf24', fontSize: '0.82rem' }}>+1 Chaitanya</div>
+                    </div>
+                  )}
+                  {earnedCoins.nityanand > 0 && (
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ margin: '0 auto 0.3rem', display: 'flex', justifyContent: 'center' }}>
+                        <NityanandCoinIcon size={46} />
+                      </div>
+                      <div style={{ fontWeight: '800', color: '#60a5fa', fontSize: '0.82rem' }}>+1 Nityanand</div>
+                    </div>
+                  )}
+                  {earnedCoins.prabhupada > 0 && (
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ margin: '0 auto 0.3rem', display: 'flex', justifyContent: 'center' }}>
+                        <PrabhupadaCoinIcon size={46} />
+                      </div>
+                      <div style={{ fontWeight: '800', color: '#f97316', fontSize: '0.82rem' }}>+1 Prabhupada</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <p style={{ margin: '0 0 1.2rem 0', color: '#94a3b8', fontSize: '0.85rem' }}>
+                Your entry has been saved into the ledger.
+              </p>
+            )}
+
+            <button
+              onClick={() => setShowSubmitModal(false)}
+              style={{
+                width: '100%',
+                padding: '0.85rem',
+                borderRadius: '14px',
+                border: 'none',
+                background: 'linear-gradient(135deg, #f59e0b, #ea580c)',
+                color: '#fff',
+                fontWeight: '800',
+                fontSize: '0.95rem',
+                cursor: 'pointer'
+              }}
+            >
+              Great! View Dashboard
+            </button>
           </div>
-          <style>{`
-            @keyframes pop-in { 0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
-            @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
-            @keyframes fade-in { 0% { opacity: 0; } 100% { opacity: 1; } }
-          `}</style>
         </div>
       )}
 

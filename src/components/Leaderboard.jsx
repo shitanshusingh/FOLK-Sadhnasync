@@ -1,3 +1,4 @@
+import { ChaitanyaCoinIcon, NityanandCoinIcon, PrabhupadaCoinIcon } from './CoinIcons';
 import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Trophy, Medal, Award, Flame, Clock, BookOpen, Star, Target, Gift, Calendar as CalIcon, LogOut, User, Activity, X, Zap } from 'lucide-react';
@@ -533,9 +534,9 @@ const Leaderboard = ({ currentUser }) => {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}><Star size={16} /> Currencies</span>
                 <div style={{ display: 'flex', gap: '10px' }}>
-                  <span style={{ color: '#fbbf24', fontWeight: 'bold' }}>{selectedDevotee.walletData?.lifetime?.chaitanya || 0} 🌕</span>
-                  <span style={{ color: '#60a5fa', fontWeight: 'bold' }}>{selectedDevotee.walletData?.lifetime?.nityanand || 0} 🔵</span>
-                  <span style={{ color: '#f97316', fontWeight: 'bold' }}>{selectedDevotee.walletData?.lifetime?.prabhupada || 0} 🟠</span>
+                  <span style={{ color: '#fbbf24', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><ChaitanyaCoinIcon size={18} /> {selectedDevotee.walletData?.lifetime?.chaitanya || 0}</span>
+                  <span style={{ color: '#60a5fa', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><NityanandCoinIcon size={18} /> {selectedDevotee.walletData?.lifetime?.nityanand || 0}</span>
+                  <span style={{ color: '#f97316', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><PrabhupadaCoinIcon size={18} /> {selectedDevotee.walletData?.lifetime?.prabhupada || 0}</span>
                 </div>
               </div>
             </div>

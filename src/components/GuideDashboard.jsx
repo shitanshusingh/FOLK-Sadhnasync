@@ -138,8 +138,12 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
 
     // Fetch Redemptions
     const r = JSON.parse(localStorage.getItem('currency_redemptions') || '[]');
-    // Filter redemptions to only show ones from devotees this guide manages
-    const myRedemptions = r.filter(req => mine.find(d => d.email === req.email));
+    // Filter redemptions: show redemptions for devotees managed by this guide or ALL if mine is empty
+    const myRedemptions = r.filter(req => {
+      if (!req) return false;
+      if (mine.length === 0) return true;
+      return mine.some(d => d.email?.toLowerCase() === req.email?.toLowerCase()) || req.guideName === currentUser.name || !req.guideName;
+    });
     setRedemptions(myRedemptions.sort((a, b) => new Date(b.date) - new Date(a.date)));
   };
 
