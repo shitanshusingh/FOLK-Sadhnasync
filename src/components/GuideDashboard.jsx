@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Users, Building2, Flag, Send, CheckSquare, BarChart2,
   LogOut, Download, TrendingUp, Award, BookOpen, Target,
@@ -443,7 +443,7 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
             {selectedDevotee ? (
               <button onClick={() => setSelectedDevotee(null)} style={{ background: 'none', border: 'none', color: '#f59e0b', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 'bold', fontSize: '0.9rem' }}>
                 <ArrowLeft size={18} /> Back to Guide Portal
-              
+              </button>
             ) : (
               <img src={folkLogo} alt="FOLK Logo" style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover', boxShadow: '0 0 15px rgba(245,158,11,0.4)' }} />
             )}
@@ -452,7 +452,7 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
                 {selectedDevotee ? `Devotee Portal View: ${selectedDevotee.name}` : 'FOLK Guide Portal'}
               </h1>
               <p style={{ margin: 0, fontSize: '0.78rem', color: '#64748b' }}>
-                {currentUser.name} Â· {myDevotees.length} Total Devotees ({totalResidents} Residents, {totalNonResidents} Non-Residents, {totalBeginners} Beginners)
+                {currentUser.name} • {myDevotees.length} Total Devotees ({totalResidents} Residents, {totalNonResidents} Non-Residents, {totalBeginners} Beginners)
               </p>
             </div>
           </div>
@@ -461,12 +461,12 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
             {selectedDevotee && (
               <button onClick={() => downloadDevoteePDF(selectedDevotee)} style={{ padding: '0.55rem 1rem', borderRadius: '10px', border: 'none', background: 'rgba(16,185,129,0.15)', color: '#10b981', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem', fontFamily: 'inherit', fontSize: '0.85rem' }}>
                 <Download size={16} /> Download PDF
-              
+              </button>
             )}
 
             <button onClick={() => setShowLogoutConfirm(true)} style={{ padding: '0.55rem 1.2rem', borderRadius: '10px', border: 'none', background: 'rgba(239,68,68,0.15)', color: '#ef4444', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem', fontFamily: 'inherit', fontSize: '0.85rem' }}>
               <LogOut size={16} /> Logout
-            
+            </button>
 
             {/* Logout Confirm Dialog */}
             {showLogoutConfirm && (
@@ -488,13 +488,13 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
                     {notifications.filter(n => !clearedNotifs.includes(n.id)).length}
                   </span>
                 )}
-              
+              </button>
             </div>
           </div>
         </div>
       </header>
 
-      {/* â•â•â• CASCADING FILTER CONTROL BAR (Category First â†’ If Resident, show Residency Filter) â•â•â• */}
+      {/* CASCADING FILTER CONTROL BAR */}
       {!selectedDevotee && (
         <div style={{ background: 'rgba(15, 23, 42, 0.7)', borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '0.8rem 2rem' }}>
           <div style={{ maxWidth: '1400px', margin: '0 auto', display: 'flex', gap: '1.2rem', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -521,7 +521,7 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
               </select>
             </div>
 
-            {/* STEP 2: IF FOLK Resident selected â†’ Show Residency Filter dropdown */}
+            {/* STEP 2: IF FOLK Resident selected -> Show Residency Filter dropdown */}
             {selectedStatus === 'FOLK Resident' && (
               <div className="animate-fade-in" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(16,185,129,0.1)', padding: '0.2rem 0.6rem', borderRadius: '8px', border: '1px solid rgba(16,185,129,0.3)' }}>
                 <span style={{ fontSize: '0.8rem', color: '#10b981', fontWeight: '700' }}>Select Residency:</span>
@@ -546,15 +546,15 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
             {TABS.map(({ id, label, icon: Icon }) => (
               <button key={id} onClick={() => setActiveTab(id)} style={{
                 padding: '0.9rem 1.2rem', border: 'none', background: 'transparent',
+                color: activeTab === id ? '#f8fafc' : '#94a3b8',
                 borderBottom: activeTab === id ? '3px solid #f59e0b' : '3px solid transparent',
-                color: activeTab === id ? '#f59e0b' : '#64748b',
                 fontWeight: activeTab === id ? '700' : '500',
                 cursor: 'pointer', whiteSpace: 'nowrap', fontSize: '0.88rem',
                 display: 'flex', alignItems: 'center', gap: '0.4rem', transition: 'all 0.2s',
                 fontFamily: 'inherit'
               }}>
                 <Icon size={15} /> {label}
-              
+              </button>
             ))}
           </div>
         </div>
@@ -562,7 +562,9 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
 
       <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '1.5rem 2rem 4rem' }}>
 
-        {/* â•â•â• DEVOTEE FULL APP VIEW (Guide can view ALL 5 TABS of the selected boy!) â•â•â• */}
+        {/* ==================================================== */}
+        {/* DEVOTEE FULL APP VIEW */}
+        {/* ==================================================== */}
         {selectedDevotee && (
           <div className="animate-fade-in">
             {/* Guide Control Header for this boy */}
@@ -574,7 +576,7 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
                     Devotee Portal: {selectedDevotee.name}
                   </div>
                   <div style={{ color: '#94a3b8', fontSize: '0.78rem' }}>
-                    Category: <strong style={{ color: '#f59e0b' }}>{selectedDevotee.status}</strong> Â· Residency: {selectedDevotee.residency || 'Non-Resident'}
+                    Category: <strong style={{ color: '#f59e0b' }}>{selectedDevotee.status}</strong> &middot; Residency: {selectedDevotee.residency || 'Non-Resident'}
                   </div>
                 </div>
               </div>
@@ -583,31 +585,29 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                 <button onClick={() => downloadDevoteePDF(selectedDevotee)} className="badge badge-emerald" style={{ padding: '0.5rem 0.8rem', cursor: 'pointer' }}>
                   <Download size={14} style={{ marginRight: '4px' }} /> PDF Report
+                </button>
                 
                 <button onClick={() => setSelectedDevotee(null)} className="badge badge-amber" style={{ padding: '0.5rem 0.8rem', cursor: 'pointer' }}>
-Exit Boy View</button>
-                
+                  Exit Boy View
+                </button>
               </div>
             </div>
 
-            {/* Boy Portal Navigation Bar (All 5 Tabs available to Guide!) */}
+            {/* Boy Portal Navigation Bar */}
             <nav className="tabs-bar" style={{ borderRadius: '12px', marginBottom: '1.5rem', background: '#0b1120' }}>
               <div className="tabs-container">
                 <button className={`tab-item ${devoteeTab === 'dashboard' ? 'active' : ''}`} onClick={() => setDevoteeTab('dashboard')}>
                   <Calendar size={16} /> 1. Analytics & Dashboard
-                
+                </button>
                 <button className={`tab-item ${devoteeTab === 'tracker' ? 'active' : ''}`} onClick={() => setDevoteeTab('tracker')}>
-                  <Home size={16} /> 2. Sadhana Entry (Filling View)
-                
+                  <Home size={16} /> 2. Sadhana Entry
+                </button>
                 <button className={`tab-item ${devoteeTab === 'leaderboard' ? 'active' : ''}`} onClick={() => setDevoteeTab('leaderboard')}>
                   <Trophy size={16} /> 3. Leaderboard
-                
+                </button>
                 <button className={`tab-item ${devoteeTab === 'bucket' ? 'active' : ''}`} onClick={() => setDevoteeTab('bucket')}>
                   <CheckSquare size={16} /> 4. Bucket List
-                
-                <button className={`tab-item ${devoteeTab === 'timer' ? 'active' : ''}`} onClick={() => setDevoteeTab('timer')}>
-                  
-                
+                </button>
               </div>
             </nav>
 
@@ -616,11 +616,12 @@ Exit Boy View</button>
             {devoteeTab === 'tracker' && <SadhanaTracker currentUser={selectedDevotee} prefilledDate={null} />}
             {devoteeTab === 'leaderboard' && <Leaderboard currentUser={selectedDevotee} />}
             {devoteeTab === 'bucket' && <BucketList currentUser={selectedDevotee} />}
-            {devoteeTab === 'timer' && <FocusTimer currentUser={selectedDevotee} />}
           </div>
         )}
 
-        {/* â•â•â• OVERVIEW & ANALYTICS TAB â•â•â• */}
+        {/* ==================================================== */}
+        {/* OVERVIEW & ANALYTICS TAB */}
+        {/* ==================================================== */}
         {!selectedDevotee && activeTab === 'overview' && (
           <div className="animate-fade-in">
             {/* KPI Row */}
@@ -811,7 +812,7 @@ PDF</button>
                   }}
                 >
                   âš¡ Auto-Fill Ekadashi 2X Campaign
-                
+                </button>
               </div>
 
               <form onSubmit={handleCreateCampaign} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -944,7 +945,7 @@ PDF</button>
 
                 <button type="submit" style={{ padding: '0.9rem', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg, #f59e0b, #ea580c)', color: '#fff', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontFamily: 'inherit', fontSize: '0.95rem' }}>
                   <Flag size={18} /> Launch Campaign & Send Invitations
-                
+                </button>
               </form>
             </div>
 
@@ -1150,7 +1151,7 @@ PDF</button>
 
                 <button type="submit" style={{ padding: '0.9rem', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg, #8b5cf6, #6d28d9)', color: '#fff', fontWeight: '800', fontSize: '1rem', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
                   <CheckSquare size={18} /> Push Priority Task to Bucket List
-                
+                </button>
               </form>
             </div>
           </div>
@@ -1217,7 +1218,7 @@ PDF</button>
 
                 <button type="submit" style={{ padding: '0.9rem', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)', color: '#fff', fontWeight: '800', fontSize: '1rem', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
                   <Send size={18} /> Send Broadcast Message
-                
+                </button>
               </form>
             </div>
           </div>
@@ -1280,7 +1281,7 @@ PDF</button>
           <div onClick={e => e.stopPropagation()} className="animate-fade-in" style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '90vw', maxWidth: '350px', background: 'var(--bg-card)', border: '1px solid var(--border-highlight)', borderRadius: '16px', padding: '1.2rem', boxShadow: '0 15px 35px rgba(0,0,0,0.7)', zIndex: 9999, display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: '80vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ margin: 0, fontSize: '1rem', color: 'var(--primary-amber)' }}>Notifications</h3>
-              <button onClick={() => setShowNotifications(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={16} />
+              <button onClick={() => setShowNotifications(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={16} /></button>
             </div>
             
             {notifications.filter(n => !clearedNotifs.includes(n.id)).length === 0 ? (
@@ -1298,7 +1299,7 @@ PDF</button>
                 ))}
                 <button onClick={handleClearNotifications} className="nav-btn btn-secondary" style={{ width: '100%', marginTop: '0.5rem', padding: '0.5rem', fontSize: '0.85rem' }}>
                   <CheckCircle size={14} /> Mark All as Read
-                
+                </button>
               </div>
             )}
           </div>
