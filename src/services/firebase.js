@@ -351,3 +351,51 @@ export const cloudFetchAllBucketLists = async () => {
 };
 
 // EOF
+
+
+// 10. Currency Redemptions Sync
+export const cloudSaveRedemption = async (redemptionObj) => {
+  if (!redemptionObj || !redemptionObj.id) return;
+  
+  const local = JSON.parse(localStorage.getItem('currency_redemptions') || '[]');
+  const existingIdx = local.findIndex(r => r.id === redemptionObj.id);
+  if (existingIdx >= 0) {
+    local[existingIdx] = redemptionObj;
+  } else {
+    local.push(redemptionObj);
+  }
+  safeSetItem('currency_redemptions', local);
+
+  if (isCloudActive && db) {
+    try {
+      const docRef = doc(db, 'currency_redemptions', redemptionObj.id);
+      await setDoc(docRef, redemptionObj);
+    } catch (e) {
+      console.warn("Failed to cloud save redemption:", e);
+    }
+  }
+};
+
+export const cloudFetchAllRedemptions = async () => {
+  if (isCloudActive && db) {
+    try {
+      const querySnapshot = await getDocs(collection(db, 'currency_redemptions'));
+      const cloudRedemptions = [];
+      querySnapshot.forEach((doc) => {
+        cloudRedemptions.push(doc.data());
+      });
+      if (cloudRedemptions.length > 0) {
+        const local = JSON.parse(localStorage.getItem('currency_redemptions') || '[]');
+        const mergedMap = new Map();
+        local.forEach(r => mergedMap.set(r.id, r));
+        cloudRedemptions.forEach(r => mergedMap.set(r.id, r));
+        const merged = Array.from(mergedMap.values());
+        safeSetItem('currency_redemptions', merged);
+        return merged;
+      }
+    } catch (e) {
+      console.warn("Failed to fetch redemptions from cloud:", e);
+    }
+  }
+  return JSON.parse(localStorage.getItem('currency_redemptions') || '[]');
+};

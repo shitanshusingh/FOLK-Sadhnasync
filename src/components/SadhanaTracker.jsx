@@ -1,7 +1,7 @@
 import { ChaitanyaCoinIcon, NityanandCoinIcon, PrabhupadaCoinIcon } from './CoinIcons';
 import { useState, useEffect, useRef } from 'react';
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, startOfToday, differenceInDays, subDays } from 'date-fns';
-import { Save, AlertTriangle, User, Lock, Unlock, Flame, Star, Zap } from 'lucide-react';
+import { Save, AlertTriangle, User, Lock, Unlock, Flame, Star, Zap, CheckCircle } from 'lucide-react';
 import { calculatePoints, DEFAULT_RESIDENCY_CONFIG } from '../utils/scoring';
 import { cloudSaveSadhanaLog } from '../services/firebase';
 import { calculateDailyCoins } from '../utils/currency';

@@ -1,3 +1,4 @@
+import { cloudSaveRedemption, cloudFetchAllRedemptions } from '../services/firebase';
 import { ChaitanyaCoinIcon, NityanandCoinIcon, PrabhupadaCoinIcon } from './CoinIcons';
 import React, { useState, useEffect, useMemo } from 'react';
 import { Award, Star, Zap, Clock, CheckCircle, XCircle, Shield, Sparkles, Gift, Info } from 'lucide-react';
@@ -21,11 +22,12 @@ const Wallet = ({ currentUser }) => {
     localStorage.setItem('hasNewCurrency', 'false');
     window.dispatchEvent(new Event('storage'));
     
-    const data = calculateUserCurrencies(currentUser.email);
-    setWalletData(data);
-    
-    const r = JSON.parse(localStorage.getItem('currency_redemptions') || '[]');
-    setRedemptions(r.filter(x => x.email === currentUser.email).sort((a,b) => new Date(b.date) - new Date(a.date)));
+    const loadRedemptions = async () => {
+      const allR = await cloudFetchAllRedemptions();
+      setRedemptions(allR.filter(x => x.email === currentUser.email).sort((a,b) => new Date(b.date) - new Date(a.date)));
+      setWalletData(calculateUserCurrencies(currentUser.email));
+    };
+    loadRedemptions();
   }, [currentUser.email]);
 
   const earnedBadges = useMemo(() => calculateAchievements(currentUser.email), [currentUser.email]);
@@ -40,7 +42,7 @@ const Wallet = ({ currentUser }) => {
     }
   };
 
-  const handleRedeem = (e) => {
+  const handleRedeem = async (e) => {
     e.preventDefault();
     const amount = Number(redeemAmount);
     if (!amount || amount <= 0) return;
@@ -76,10 +78,9 @@ const Wallet = ({ currentUser }) => {
       remarks: ''
     };
 
-    setTimeout(() => {
+    setTimeout(async () => {
+      await cloudSaveRedemption(newRequest);
       const r = JSON.parse(localStorage.getItem('currency_redemptions') || '[]');
-      r.push(newRequest);
-      localStorage.setItem('currency_redemptions', JSON.stringify(r));
       setRedemptions(r.filter(x => x.email === currentUser.email).sort((a,b) => new Date(b.date) - new Date(a.date)));
       
       setWalletData(calculateUserCurrencies(currentUser.email));
