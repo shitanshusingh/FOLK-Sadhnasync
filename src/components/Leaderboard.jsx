@@ -378,11 +378,7 @@ const Leaderboard = ({ currentUser }) => {
                   </div>
                 )}
                 <span style={{ fontWeight: 'bold', color: '#1e293b', marginTop: '5px' }}>{top3[1].totalScore} %</span>
-              <div style={{ display: 'flex', gap: '3px', marginTop: '3px', alignItems: 'center' }}>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', fontSize: '0.7rem', fontWeight: 'bold', color: '#78350f' }}><ChaitanyaCoinIcon size={14} /> {top3[1].walletData?.lifetime?.chaitanya || 0}</span>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', fontSize: '0.7rem', fontWeight: 'bold', color: '#1e3a8a' }}><NityanandCoinIcon size={14} /> {top3[1].walletData?.lifetime?.nityanand || 0}</span>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', fontSize: '0.7rem', fontWeight: 'bold', color: '#7c2d12' }}><PrabhupadaCoinIcon size={14} /> {top3[1].walletData?.lifetime?.prabhupada || 0}</span>
-              </div>
+
               </div>
             </div>
           )}
@@ -406,11 +402,7 @@ const Leaderboard = ({ currentUser }) => {
                 </div>
               )}
               <span style={{ fontWeight: 'bold', color: '#451a03', marginTop: '5px' }}>{top3[0].totalScore} %</span>
-              <div style={{ display: 'flex', gap: '4px', marginTop: '4px', alignItems: 'center' }}>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', fontSize: '0.75rem', fontWeight: '800', color: '#78350f' }}><ChaitanyaCoinIcon size={16} /> {top3[0].walletData?.lifetime?.chaitanya || 0}</span>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', fontSize: '0.75rem', fontWeight: '800', color: '#1e3a8a' }}><NityanandCoinIcon size={16} /> {top3[0].walletData?.lifetime?.nityanand || 0}</span>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', fontSize: '0.75rem', fontWeight: '800', color: '#7c2d12' }}><PrabhupadaCoinIcon size={16} /> {top3[0].walletData?.lifetime?.prabhupada || 0}</span>
-              </div>
+
             </div>
           </div>
 
@@ -434,11 +426,7 @@ const Leaderboard = ({ currentUser }) => {
                   </div>
                 )}
                 <span style={{ fontWeight: 'bold', color: '#451a03', marginTop: '5px' }}>{top3[2].totalScore} %</span>
-              <div style={{ display: 'flex', gap: '3px', marginTop: '3px', alignItems: 'center' }}>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', fontSize: '0.7rem', fontWeight: 'bold', color: '#78350f' }}><ChaitanyaCoinIcon size={14} /> {top3[2].walletData?.lifetime?.chaitanya || 0}</span>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', fontSize: '0.7rem', fontWeight: 'bold', color: '#1e3a8a' }}><NityanandCoinIcon size={14} /> {top3[2].walletData?.lifetime?.nityanand || 0}</span>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', fontSize: '0.7rem', fontWeight: 'bold', color: '#7c2d12' }}><PrabhupadaCoinIcon size={14} /> {top3[2].walletData?.lifetime?.prabhupada || 0}</span>
-              </div>
+
               </div>
             </div>
           )}
