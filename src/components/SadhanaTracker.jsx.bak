@@ -479,8 +479,7 @@ const SadhanaTracker = ({ currentUser, prefilledDate }) => {
                 Score: <strong>{score} / {maxScore}</strong>
               </div>
             </div>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '1rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '1rem' }}>
             {activeCore.map(activity => {
               const currentPts = calculatePoints(activity.id, activityTimes[activity.id], config, details.inTemple);
               const targetTime = getTargetTime(activity.id, config[activity.id].time, details.inTemple);

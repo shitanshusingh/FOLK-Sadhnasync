@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Clock, Flame, CheckCircle, Activity, BookOpen, Heart, ThumbsUp, Star } from 'lucide-react';
+import { X, Clock, Flame, CheckCircle, Activity, BookOpen, Heart, ThumbsUp, Star, Sparkles } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
+import { cloudSaveReaction } from '../services/firebase';
 
 const StoryViewer = ({ feedUser, onClose, currentUser }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -9,23 +10,21 @@ const StoryViewer = ({ feedUser, onClose, currentUser }) => {
   const [isPaused, setIsPaused] = useState(false);
   const [showReactions, setShowReactions] = useState(false);
   
-  // Get up to 3 days of entries, oldest to newest
   const entries = feedUser.entries || [];
   const currentEntry = entries[currentIndex];
   
   const timerRef = useRef(null);
   
-  // Reactions state
   const reactionKey = `sadhana_story_reactions_${currentEntry?.date}_${feedUser.user.email}`;
   const [reactions, setReactions] = useState(() => JSON.parse(localStorage.getItem(reactionKey) || '[]'));
   
   const STYD_DURATION = 10000; // 10 seconds per story
 
   useEffect(() => {
-    // Reset progress when entry changes
     setProgress(0);
     if (currentEntry) {
-        setReactions(JSON.parse(localStorage.getItem(`sadhana_story_reactions_${currentEntry.date}_${feedUser.user.email}`) || '[]'));
+      const saved = JSON.parse(localStorage.getItem(`sadhana_story_reactions_${currentEntry.date}_${feedUser.user.email}`) || '[]');
+      setReactions(saved);
     }
   }, [currentIndex, currentEntry, feedUser.user.email]);
 
@@ -35,7 +34,7 @@ const StoryViewer = ({ feedUser, onClose, currentUser }) => {
       return;
     }
     
-    const interval = 50; // update every 50ms
+    const interval = 50;
     const step = (interval / STYD_DURATION) * 100;
     
     timerRef.current = setInterval(() => {
@@ -72,17 +71,18 @@ const StoryViewer = ({ feedUser, onClose, currentUser }) => {
     const newReaction = { emoji, from: currentUser.name };
     const updated = [...reactions, newReaction];
     setReactions(updated);
-    localStorage.setItem(reactionKey, JSON.stringify(updated));
+    cloudSaveReaction(reactionKey, updated);
     setShowReactions(true);
-    setTimeout(() => setShowReactions(false), 2000); // Floating effect
+    setTimeout(() => setShowReactions(false), 2000);
   };
 
   if (!currentEntry) return null;
   const attendedMA = currentEntry.activityTimes?.mangala_arati ? 'Yes' : 'No';
+  const details = currentEntry.details || {};
 
   return createPortal(
     <div 
-      style={{ position: 'fixed', inset: 0, zIndex: 99999, background: 'rgba(0,0,0,0.9)', display: 'flex', flexDirection: 'column' }}
+      style={{ position: 'fixed', inset: 0, zIndex: 99999, background: 'rgba(0,0,0,0.92)', display: 'flex', flexDirection: 'column' }}
       onMouseDown={() => setIsPaused(true)}
       onMouseUp={() => setIsPaused(false)}
       onTouchStart={() => setIsPaused(true)}
@@ -118,59 +118,92 @@ const StoryViewer = ({ feedUser, onClose, currentUser }) => {
         </button>
       </div>
 
-      {/* Navigation Zones (Left 30% = prev, Right 70% = next) */}
+      {/* Navigation Touch Zones */}
       <div style={{ position: 'absolute', inset: 0, top: '60px', bottom: '80px', display: 'flex' }}>
         <div style={{ width: '30%' }} onClick={(e) => { e.stopPropagation(); handlePrev(); }} />
         <div style={{ width: '70%' }} onClick={(e) => { e.stopPropagation(); handleNext(); }} />
       </div>
 
-      {/* Content */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', pointerEvents: 'none' }}>
-        <div style={{ background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', borderRadius: '24px', width: '100%', maxWidth: '340px', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem', border: '1px solid rgba(255,255,255,0.2)' }}>
-          <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
-            <h3 style={{ margin: 0, color: 'var(--primary-amber)', fontSize: '1.4rem' }}>Sādhana Complete! 🎊</h3>
+      {/* Story Content Cards */}
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '15px', pointerEvents: 'none' }}>
+        <div style={{ background: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(16px)', borderRadius: '24px', width: '100%', maxWidth: '360px', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.8rem', border: '1px solid rgba(245, 158, 11, 0.35)', boxShadow: '0 15px 35px rgba(0,0,0,0.6)' }}>
+          
+          <div style={{ textAlign: 'center', marginBottom: '0.4rem' }}>
+            <h3 style={{ margin: 0, color: 'var(--primary-amber)', fontSize: '1.25rem', fontFamily: 'Outfit, sans-serif' }}>Sādhana Story 🌸</h3>
+            <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Score: {currentEntry.score}/{currentEntry.maxScore || 20} pts</span>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.95rem' }}><Clock size={14} style={{ display: 'inline', marginRight: '6px' }}/>Wake Up</span>
-            <span style={{ fontWeight: '800', color: '#c4b5fd', fontSize: '1.1rem' }}>{currentEntry.details?.wakeupTime || '--'}</span>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem', fontSize: '0.82rem' }}>
+            
+            <div style={{ background: 'rgba(255,255,255,0.05)', padding: '0.6rem', borderRadius: '12px' }}>
+              <span style={{ color: '#94a3b8', display: 'block', fontSize: '0.72rem' }}>Wake Up</span>
+              <strong style={{ color: '#c4b5fd', fontSize: '0.95rem' }}>{details.wakeupTime || '--'}</strong>
+            </div>
+
+            <div style={{ background: 'rgba(255,255,255,0.05)', padding: '0.6rem', borderRadius: '12px' }}>
+              <span style={{ color: '#94a3b8', display: 'block', fontSize: '0.72rem' }}>Mangala Arati</span>
+              <strong style={{ color: attendedMA === 'Yes' ? '#34d399' : '#fb7185', fontSize: '0.95rem' }}>{attendedMA}</strong>
+            </div>
+
+            <div style={{ background: 'rgba(255,255,255,0.05)', padding: '0.6rem', borderRadius: '12px' }}>
+              <span style={{ color: '#94a3b8', display: 'block', fontSize: '0.72rem' }}>Chanting</span>
+              <strong style={{ color: '#34d399', fontSize: '0.95rem' }}>{details.totalRounds || 0} rounds</strong>
+            </div>
+
+            <div style={{ background: 'rgba(255,255,255,0.05)', padding: '0.6rem', borderRadius: '12px' }}>
+              <span style={{ color: '#94a3b8', display: 'block', fontSize: '0.72rem' }}>Reading</span>
+              <strong style={{ color: '#60a5fa', fontSize: '0.95rem' }}>{details.readingDuration || 0} mins</strong>
+            </div>
+
+            <div style={{ background: 'rgba(255,255,255,0.05)', padding: '0.6rem', borderRadius: '12px' }}>
+              <span style={{ color: '#94a3b8', display: 'block', fontSize: '0.72rem' }}>Hearing</span>
+              <strong style={{ color: '#e879f9', fontSize: '0.95rem' }}>{details.hearingDuration || 0} mins</strong>
+            </div>
+
+            <div style={{ background: 'rgba(255,255,255,0.05)', padding: '0.6rem', borderRadius: '12px' }}>
+              <span style={{ color: '#94a3b8', display: 'block', fontSize: '0.72rem' }}>Location</span>
+              <strong style={{ color: details.inTemple ? '#fbbf24' : '#94a3b8', fontSize: '0.95rem' }}>{details.inTemple ? '🏛️ Temple' : '🏡 Home'}</strong>
+            </div>
+
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.95rem' }}><Flame size={14} style={{ display: 'inline', marginRight: '6px' }}/>Mangala Arati</span>
-            <span style={{ fontWeight: '800', color: attendedMA === 'Yes' ? '#34d399' : '#fb7185', fontSize: '1.1rem' }}>{attendedMA}</span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.95rem' }}><CheckCircle size={14} style={{ display: 'inline', marginRight: '6px' }}/>Total Chanting</span>
-            <span style={{ fontWeight: '800', color: '#34d399', fontSize: '1.1rem' }}>{currentEntry.details?.totalRounds || 0} rds</span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.95rem' }}><BookOpen size={14} style={{ display: 'inline', marginRight: '6px' }}/>Reading</span>
-            <span style={{ fontWeight: '800', color: '#60a5fa', fontSize: '1.1rem' }}>{currentEntry.details?.readingDuration || 0}m</span>
-          </div>
+
+          {details.bookName && (
+            <div style={{ background: 'rgba(245, 158, 11, 0.1)', padding: '0.5rem 0.8rem', borderRadius: '10px', fontSize: '0.78rem', color: '#fbbf24', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+              📖 Book: {details.bookName}
+            </div>
+          )}
+
+          {details.sevaName && (
+            <div style={{ background: 'rgba(168, 85, 247, 0.1)', padding: '0.5rem 0.8rem', borderRadius: '10px', fontSize: '0.78rem', color: '#c4b5fd', border: '1px solid rgba(168, 85, 247, 0.2)' }}>
+              ✨ Seva: {details.sevaName} ({details.sevaDurationMins || 0}m)
+            </div>
+          )}
+
         </div>
       </div>
       
-      {/* Floating Reactions overlay */}
+      {/* Floating Reactions Overlay */}
       {showReactions && (
-        <div style={{ position: 'absolute', bottom: '100px', left: 0, right: 0, display: 'flex', justifyContent: 'center', pointerEvents: 'none', animation: 'floatUp 2s ease-out forwards' }}>
+        <div style={{ position: 'absolute', bottom: '100px', left: 0, right: 0, display: 'flex', justifyContent: 'center', pointerEvents: 'none' }}>
           <div style={{ fontSize: '3rem' }}>{reactions[reactions.length - 1]?.emoji}</div>
         </div>
       )}
 
       {/* Footer / Reaction Bar */}
       <div style={{ padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'linear-gradient(0deg, rgba(0,0,0,0.8) 0%, transparent 100%)', zIndex: 10 }}>
-        <div style={{ display: 'flex', gap: '5px' }}>
-          {/* List who reacted */}
+        <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
           {reactions.slice(-3).map((r, i) => (
             <div key={i} style={{ background: 'rgba(255,255,255,0.2)', padding: '2px 6px', borderRadius: '12px', fontSize: '0.75rem', color: '#fff' }}>
-              {r.emoji} {r.from.split(' ')[0]}
+              {r.emoji} {r.from?.split(' ')[0]}
             </div>
           ))}
           {reactions.length > 3 && <div style={{ color: '#fff', fontSize: '0.75rem' }}>+{reactions.length - 3}</div>}
         </div>
         <div style={{ display: 'flex', gap: '15px' }}>
-          <button onClick={(e) => { e.stopPropagation(); addReaction('🔥'); }} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', transition: 'transform 0.1s' }}>🔥</button>
-          <button onClick={(e) => { e.stopPropagation(); addReaction('🙏'); }} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', transition: 'transform 0.1s' }}>🙏</button>
-          <button onClick={(e) => { e.stopPropagation(); addReaction('❤️'); }} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', transition: 'transform 0.1s' }}>❤️</button>
+          <button onClick={(e) => { e.stopPropagation(); addReaction('🔥'); }} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer' }}>🔥</button>
+          <button onClick={(e) => { e.stopPropagation(); addReaction('🙏'); }} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer' }}>🙏</button>
+          <button onClick={(e) => { e.stopPropagation(); addReaction('❤️'); }} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer' }}>❤️</button>
+          <button onClick={(e) => { e.stopPropagation(); addReaction('🙌'); }} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer' }}>🙌</button>
         </div>
       </div>
     </div>,

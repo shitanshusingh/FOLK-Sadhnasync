@@ -1,10 +1,12 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Award, Clock, CheckCircle, XCircle, Shield, Sparkles, Gift, Info, RefreshCw, ArrowRight, ChevronDown, ChevronUp } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { Award, Clock, CheckCircle, XCircle, Shield, Sparkles, Gift, Info, RefreshCw, ArrowRight, ChevronDown, ChevronUp, Wallet as WalletIcon, Coins } from 'lucide-react';
 import { calculateUserCurrencies, getPrestigeTitle } from '../utils/currency';
 import { ACHIEVEMENTS, calculateAchievements } from '../utils/achievements';
 import { ChaitanyaCoinIcon, NityanandCoinIcon, PrabhupadaCoinIcon } from './CoinIcons';
 import { cloudSaveRedemption, cloudFetchAllRedemptions } from '../services/firebase';
 import SlideToAction from './SlideToAction';
+
+
 
 const Wallet = ({ currentUser }) => {
   const [walletData, setWalletData] = useState({ lifetime: {}, balance: {} });
@@ -16,6 +18,7 @@ const Wallet = ({ currentUser }) => {
   const [redeemCategory, setRedeemCategory] = useState('Trip Discount');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedSuccess, setSubmittedSuccess] = useState(false);
+  const [walletTab, setWalletTab] = useState('balances');
   const [showRulesInfo, setShowRulesInfo] = useState(true);
   const [showRulesAccordion, setShowRulesAccordion] = useState(false);
   const [sliderKey, setSliderKey] = useState(0);
@@ -151,7 +154,152 @@ const Wallet = ({ currentUser }) => {
   return (
     <div className="animate-fade-in" style={{ paddingBottom: '5rem', maxWidth: '850px', margin: '0 auto' }}>
       
-      {/* 💰 DYNAMIC GLASSMORPHIC CURRENCY CARDS */}
+      {/* 👑 RICH USER PRESTIGE & RESIDENCY HEADER BANNER */}
+      <div style={{
+        background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(139, 92, 246, 0.15))',
+        backdropFilter: 'blur(20px)',
+        border: '1px solid rgba(245, 158, 11, 0.35)',
+        borderRadius: '20px',
+        padding: '1.2rem 1.4rem',
+        marginBottom: '1.2rem',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '1rem',
+        boxShadow: '0 10px 30px rgba(0,0,0,0.35)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ position: 'relative' }}>
+            <div style={{ width: '54px', height: '54px', borderRadius: '50%', overflow: 'hidden', border: '2.5px solid #f59e0b', boxShadow: '0 0 15px rgba(245, 158, 11, 0.4)' }}>
+              {currentUser.photo ? <img src={currentUser.photo} alt={currentUser.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ width: '100%', height: '100%', background: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#fff', fontSize: '1.3rem' }}>{currentUser.name.substring(0,2).toUpperCase()}</div>}
+            </div>
+            <span style={{ position: 'absolute', bottom: '-2px', right: '-2px', background: '#10b981', border: '2px solid #0f172a', borderRadius: '50%', width: '14px', height: '14px' }} title="Active Status" />
+          </div>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <h2 style={{ margin: 0, fontSize: '1.2rem', color: '#ffffff', fontWeight: '800' }}>{currentUser.name}</h2>
+              <span style={{ fontSize: '0.72rem', background: 'rgba(245, 158, 11, 0.18)', color: '#f59e0b', padding: '0.15rem 0.6rem', borderRadius: '12px', border: '1px solid rgba(245, 158, 11, 0.35)', fontWeight: '700' }}>
+                {currentUser.status || 'FOLK Resident'}
+              </span>
+            </div>
+            <div style={{ fontSize: '0.8rem', color: '#c4b5fd', marginTop: '0.2rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Shield size={14} color="#a855f7" /> Prestige Title: <strong style={{ color: '#e9d5ff' }}>{title}</strong>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: '1.2rem', background: 'rgba(15, 23, 42, 0.6)', padding: '0.6rem 1rem', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.08)' }}>
+          <div style={{ textAlign: 'center' }}>
+            <span style={{ display: 'block', fontSize: '0.68rem', color: '#94a3b8' }}>Lifetime Gold</span>
+            <strong style={{ fontSize: '1rem', color: '#fbbf24' }}>{walletData.lifetime.chaitanya || 0} 🪙</strong>
+          </div>
+          <div style={{ width: '1px', background: 'rgba(255,255,255,0.1)' }} />
+          <div style={{ textAlign: 'center' }}>
+            <span style={{ display: 'block', fontSize: '0.68rem', color: '#94a3b8' }}>Trip Discount</span>
+            <strong style={{ fontSize: '1rem', color: '#34d399' }}>{currentUser.status === 'Beginner' ? (walletData.balance.krishna * 1) : (walletData.balance.chaitanya * 5)}% OFF</strong>
+          </div>
+        </div>
+      </div>
+
+            {/* 📱 SINGLE-SCREEN TABBED WALLET NAVIGATION */}
+      <div style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: '0.4rem',
+        marginBottom: '1.2rem',
+        background: 'rgba(15, 23, 42, 0.85)',
+        padding: '0.4rem',
+        borderRadius: '16px',
+        border: '1px solid rgba(245, 158, 11, 0.3)'
+      }}>
+        {[
+          { id: 'balances', label: 'Balances', icon: <WalletIcon size={16} />, gradient: 'linear-gradient(135deg, #f59e0b, #ea580c)' },
+          { id: 'exchange', label: 'Exchange', icon: <RefreshCw size={16} />, gradient: 'linear-gradient(135deg, #8b5cf6, #6d28d9)' },
+          { id: 'redeem', label: 'Redeem', icon: <Gift size={16} />, gradient: 'linear-gradient(135deg, #10b981, #059669)' },
+          { id: 'achievements', label: 'Badges', icon: <Award size={16} />, gradient: 'linear-gradient(135deg, #ec4899, #be185d)' },
+          { id: 'rules', label: 'Rules', icon: <Info size={16} />, gradient: 'linear-gradient(135deg, #3b82f6, #1d4ed8)' }
+        ].map(tab => {
+          const isActive = walletTab === tab.id;
+          const shadowColor = tab.gradient.match(/#[a-z0-9]+/i) ? tab.gradient.match(/#[a-z0-9]+/i)[0] : '#ffffff';
+          return (
+            <button
+              key={tab.id}
+              onClick={() => { triggerHaptic(); setWalletTab(tab.id); }}
+              style={{
+                flex: 1,
+                minWidth: '100px',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '0.65rem 0.3rem',
+                borderRadius: '12px',
+                border: 'none',
+                background: isActive ? tab.gradient : 'transparent',
+                color: isActive ? '#fff' : '#94a3b8',
+                fontWeight: '800',
+                fontSize: '0.8rem',
+                cursor: 'pointer',
+                boxShadow: isActive ? `0 4px 15px ${shadowColor}60` : 'none',
+                transition: 'all 0.2s',
+                opacity: isActive ? 1 : 0.75
+              }}
+            >
+              {tab.icon} {tab.label}
+            </button>
+          );
+        })}
+      </div>
+      
+        {walletTab === 'balances' && (
+  <div className="animate-fade-in">
+  {/* 💰 DYNAMIC GLASSMORPHIC CURRENCY CARDS */}
+      {currentUser?.status === 'Beginner' ? (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.8rem', marginBottom: '1.2rem' }}>
+          {/* Krishna Coin */}
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(126, 34, 206, 0.08))',
+            border: '1px solid rgba(168, 85, 247, 0.4)',
+            borderRadius: '18px',
+            padding: '1.1rem 0.8rem',
+            textAlign: 'center',
+            boxShadow: '0 8px 20px rgba(0,0,0,0.3)'
+          }}>
+            <div style={{ fontSize: '2rem', marginBottom: '0.2rem' }}>🪈</div>
+            <div style={{ fontSize: '1.7rem', fontWeight: '900', color: '#c4b5fd', fontFamily: 'Outfit, sans-serif' }}>
+              {walletData.balance.krishna || 0}
+            </div>
+            <div style={{ fontSize: '0.78rem', fontWeight: '700', color: '#f3e8ff', textTransform: 'uppercase' }}>
+              Krishna Coin
+            </div>
+            <div style={{ fontSize: '0.68rem', color: '#94a3b8', marginTop: '0.3rem' }}>
+              Lifetime: {walletData.lifetime.krishna || 0}
+            </div>
+          </div>
+
+          {/* Balaram Coin */}
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(29, 78, 216, 0.08))',
+            border: '1px solid rgba(59, 130, 246, 0.4)',
+            borderRadius: '18px',
+            padding: '1.1rem 0.8rem',
+            textAlign: 'center',
+            boxShadow: '0 8px 20px rgba(0,0,0,0.3)'
+          }}>
+            <div style={{ fontSize: '2rem', marginBottom: '0.2rem' }}>🌾</div>
+            <div style={{ fontSize: '1.7rem', fontWeight: '900', color: '#60a5fa', fontFamily: 'Outfit, sans-serif' }}>
+              {walletData.balance.balaram || 0}
+            </div>
+            <div style={{ fontSize: '0.78rem', fontWeight: '700', color: '#bfdbfe', textTransform: 'uppercase' }}>
+              Balaram Coin
+            </div>
+            <div style={{ fontSize: '0.68rem', color: '#94a3b8', marginTop: '0.3rem' }}>
+              Lifetime: {walletData.lifetime.balaram || 0}
+            </div>
+          </div>
+        </div>
+      ) : (
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.8rem', marginBottom: '1.2rem' }}>
         
         {/* Chaitanya Gold */}
@@ -222,10 +370,14 @@ const Wallet = ({ currentUser }) => {
             Total: {walletData.lifetime.prabhupada || 0}
           </div>
         </div>
-
       </div>
+    )}
+  </div>
+)}
 
-      {/* 💡 SLEEK 1-LINE COLLAPSIBLE POINT RULES ACCORDION */}
+{walletTab === 'rules' && (
+  <div className="animate-fade-in">
+  {/* 💡 SLEEK 1-LINE COLLAPSIBLE POINT RULES ACCORDION */}
       <div style={{
         background: 'rgba(15, 23, 42, 0.85)',
         backdropFilter: 'blur(20px)',
@@ -267,20 +419,19 @@ const Wallet = ({ currentUser }) => {
         {/* Collapsible Content */}
         {showRulesAccordion && (
           <div className="animate-fade-in" style={{ padding: '1.2rem', borderTop: '1px solid rgba(245, 158, 11, 0.2)' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '0.9rem', fontSize: '0.82rem', color: '#cbd5e1' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '0.9rem', fontSize: '0.82rem', color: '#cbd5e1' }}>
               {/* Chaitanya Gold Rule */}
               <div style={{ background: 'rgba(251, 191, 36, 0.08)', padding: '0.9rem', borderRadius: '14px', border: '1px solid rgba(251, 191, 36, 0.25)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.4rem' }}>
                   <ChaitanyaCoinIcon size={26} />
                   <strong style={{ color: '#fbbf24', fontSize: '0.92rem' }}>Chaitanya Coin (Gold)</strong>
                 </div>
-                • <strong>How to Earn:</strong> 20/20 Full Daily Sādhana score.<br/>
-                • <strong>Rewards:</strong><br/>
-                &nbsp;&nbsp;- <strong>100 Coins</strong> = Up to 100% Free FOLK Trip<br/>
-                &nbsp;&nbsp;- <strong>20 Coins</strong> = Up to 100% Free Event Entry<br/>
-                • <strong>Exchange Ratio:</strong> 1 Gold = 3 Blue = 6 Saffron<br/>
-                <span style={{ color: '#fef08a', fontSize: '0.75rem', marginTop: '0.4rem', display: 'block', borderTop: '1px stroke rgba(251,191,36,0.2)', paddingTop: '0.3rem' }}>
-                  ⚡ <em>Missed Morning Sadhana?</em> Do 16+ rounds, 60+ mins reading & 60+ mins hearing to still recover 1 Gold Coin!
+                • <strong>🏠 FOLK Resident Challenge:</strong> 7-Day Full Score Streak (20/20 pts).<br/>
+                • <strong>🏡 Non-Resident Challenge:</strong> 7-Day Weekly Averages (Wakeup ≤ 5:30 AM, Chanting Completion ≤ 9:00 AM, Reading ≥ 45m/day, Hearing ≥ 30m/day).<br/>
+                • <strong>Reward:</strong> 1 Chaitanya Coin = <strong>5% Discount on FOLK Trip</strong>.<br/>
+                • <strong>Expiry:</strong> Valid for 4 months (remains in Lifetime Total & Prestige).<br/>
+                <span style={{ color: '#fef08a', fontSize: '0.73rem', marginTop: '0.4rem', display: 'block', borderTop: '1px solid rgba(251,191,36,0.2)', paddingTop: '0.3rem' }}>
+                  ⭐ <em>Exclusive:</em> Chaitanya Gold is the ONLY coin directly redeemable for rewards!
                 </span>
               </div>
 
@@ -290,9 +441,9 @@ const Wallet = ({ currentUser }) => {
                   <NityanandCoinIcon size={26} />
                   <strong style={{ color: '#60a5fa', fontSize: '0.92rem' }}>Nityanand Coin (Blue)</strong>
                 </div>
-                • <strong>How to Earn:</strong> 10+ Sādhana score.<br/>
-                • <strong>Exchange Ratio:</strong> 1 Blue Coin = 2 Saffron Coins.<br/>
-                • <strong>Upgrade:</strong> 3 Nityanand Blue Coins = 1 Chaitanya Gold Coin!
+                • <strong>Criteria:</strong> 4-Day Sādhana Streak / Average.<br/>
+                • <strong>Auto-Upgrade:</strong> Continues to 7 days? Converts automatically into <strong>1 Chaitanya Gold Coin</strong>!<br/>
+                • <strong>Exchange:</strong> 3 Nityanand Coins = 1 Chaitanya Gold Coin.
               </div>
 
               {/* Prabhupada Saffron Rule */}
@@ -301,17 +452,35 @@ const Wallet = ({ currentUser }) => {
                   <PrabhupadaCoinIcon size={26} />
                   <strong style={{ color: '#f97316', fontSize: '0.92rem' }}>Prabhupada Coin (Bonus)</strong>
                 </div>
-                • <strong>How to Earn:</strong> Bonus reading (&gt;60 mins), hearing (&gt;60 mins), or 20+ rounds.<br/>
+                • <strong>Criteria:</strong> Bonus Reading (&gt;60m), Hearing (&gt;60m), or 20+ rounds.<br/>
                 • <strong>Exchange Ratios:</strong><br/>
                 &nbsp;&nbsp;- <strong>2 Prabhupada Coins</strong> = 1 Nityanand Blue Coin<br/>
                 &nbsp;&nbsp;- <strong>6 Prabhupada Coins</strong> = 1 Chaitanya Gold Coin
+              </div>
+
+              {/* Beginner Krishna & Balaram Rule */}
+              <div style={{ background: 'rgba(168, 85, 247, 0.08)', padding: '0.9rem', borderRadius: '14px', border: '1px solid rgba(168, 85, 247, 0.25)', gridColumn: 'span 1' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.4rem' }}>
+                  <span style={{ fontSize: '1.4rem' }}>🪈🌾</span>
+                  <strong style={{ color: '#c4b5fd', fontSize: '0.92rem' }}>Beginner Currency System</strong>
+                </div>
+                • <strong>Krishna Coin:</strong> 30m Reading + 30m Hearing + 4 Rounds = <strong>1% FOLK Trip Discount per coin</strong>.<br/>
+                • <strong>Balaram Coin:</strong> Earned on partial beginner activities.<br/>
+                • <strong>Ratio:</strong> 1.5 Balaram Coins = 1 Krishna Coin.
               </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* 🔄 INTERACTIVE CURRENCY CONVERTER / EXCHANGE CARD */}
+      
+
+    </div>
+)}
+
+{walletTab === 'exchange' && (
+  <div className="animate-fade-in">
+  {/* 🔄 INTERACTIVE CURRENCY CONVERTER / EXCHANGE CARD */}
       <div style={{
         background: 'rgba(15, 23, 42, 0.75)',
         backdropFilter: 'blur(20px)',
@@ -356,9 +525,9 @@ const Wallet = ({ currentUser }) => {
                 outline: 'none'
               }}
             >
-              <option value="2P_to_1N">2 Prabhupada (Saffron) → 1 Nityanand (Blue)</option>
-              <option value="3N_to_1C">3 Nityanand (Blue) → 1 Chaitanya (Gold)</option>
-              <option value="6P_to_1C">6 Prabhupada (Saffron) → 1 Chaitanya (Gold)</option>
+              <option value="2P_to_1N">2 Prabhupada → 1 Nityanand</option>
+              <option value="3N_to_1C">3 Nityanand → 1 Chaitanya</option>
+              <option value="6P_to_1C">6 Prabhupada → 1 Chaitanya</option>
             </select>
           </div>
 
@@ -406,9 +575,13 @@ const Wallet = ({ currentUser }) => {
             Convert <ArrowRight size={16} />
           </button>
         </div>
-      </div>
+    </div>
+  </div>
+)}
 
-      {/* 🛡️ ENHANCED ATTRACTIVE ACHIEVEMENTS SECTION */}
+{walletTab === 'achievements' && (
+  <div className="animate-fade-in">
+  {/* 🛡️ ENHANCED ATTRACTIVE ACHIEVEMENTS SECTION */}
       <div style={{
         background: 'rgba(15, 23, 42, 0.65)',
         backdropFilter: 'blur(16px)',
@@ -453,7 +626,14 @@ const Wallet = ({ currentUser }) => {
         </div>
       </div>
 
-      {/* 🎁 REDEMPTION STORE WITH RESTORED SLIDE-TO-ACTION (SWIPE TO REDEEM) */}
+      
+
+    </div>
+)}
+
+{walletTab === 'redeem' && (
+  <div className="animate-fade-in">
+  {/* 🎁 REDEMPTION STORE WITH RESTORED SLIDE-TO-ACTION (SWIPE TO REDEEM) */}
       <div style={{
         background: 'rgba(15, 23, 42, 0.75)',
         backdropFilter: 'blur(20px)',
@@ -472,16 +652,6 @@ const Wallet = ({ currentUser }) => {
           </span>
         </div>
 
-        {/* Explicit Reward Pills */}
-        <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', marginBottom: '1.2rem' }}>
-          <div style={{ fontSize: '0.78rem', background: 'rgba(251, 191, 36, 0.12)', color: '#fbbf24', border: '1px solid rgba(251, 191, 36, 0.3)', padding: '0.4rem 0.8rem', borderRadius: '12px', fontWeight: '700' }}>
-            ⛺ 100 Chaitanya Coins = Up to 100% Free FOLK Trip
-          </div>
-          <div style={{ fontSize: '0.78rem', background: 'rgba(59, 130, 246, 0.12)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.3)', padding: '0.4rem 0.8rem', borderRadius: '12px', fontWeight: '700' }}>
-            🎟️ 20 Chaitanya Coins = Up to 100% Free Event Entry
-          </div>
-        </div>
-
         <form style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
             
@@ -496,7 +666,7 @@ const Wallet = ({ currentUser }) => {
                 style={{
                   width: '100%',
                   background: '#0b1120',
-                  color: redeemType === 'Chaitanya' ? '#fbbf24' : redeemType === 'Nityanand' ? '#60a5fa' : '#f97316',
+                  color: '#fbbf24',
                   border: '1px solid rgba(255, 255, 255, 0.15)',
                   borderRadius: '14px',
                   padding: '0.75rem 0.9rem',
@@ -506,9 +676,7 @@ const Wallet = ({ currentUser }) => {
                   cursor: 'pointer'
                 }}
               >
-                <option value="Chaitanya" style={{ background: '#0f172a', color: '#fbbf24' }}>🥇 Chaitanya (Gold)</option>
-                <option value="Nityanand" style={{ background: '#0f172a', color: '#60a5fa' }}>🔵 Nityanand (Blue)</option>
-                <option value="Prabhupada" style={{ background: '#0f172a', color: '#f97316' }}>⚡ Prabhupada (Bonus)</option>
+                <option value="Chaitanya" style={{ background: '#0f172a', color: '#fbbf24' }}>🥇 Chaitanya Coin</option>
               </select>
             </div>
 
@@ -535,6 +703,14 @@ const Wallet = ({ currentUser }) => {
                   outline: 'none'
                 }}
               />
+              
+              {/* Dynamic Discount Calculator */}
+              {redeemAmount > 0 && (redeemCategory === 'Trip Discount' || redeemCategory === 'Event Entry') && (
+                <div style={{ marginTop: '0.6rem', padding: '0.6rem 0.8rem', background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '10px', color: '#34d399', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Sparkles size={14} />
+                  <span>Calculated Discount: <strong>{Math.min(100, (Number(redeemAmount) / 20) * 100)}% OFF</strong></span>
+                </div>
+              )}
             </div>
 
           </div>
@@ -560,10 +736,10 @@ const Wallet = ({ currentUser }) => {
                 cursor: 'pointer'
               }}
             >
-              <option value="Trip Discount" style={{ background: '#0f172a' }}>⛺ FOLK Yatra / Trip Discount</option>
-              <option value="Event Entry" style={{ background: '#0f172a' }}>🎟️ FOLK Youth Event Pass</option>
-              <option value="Books/Merch" style={{ background: '#0f172a' }}>📚 Srila Prabhupada Books / Merch</option>
-              <option value="Other" style={{ background: '#0f172a' }}>✨ Custom Reward (Guide Approval)</option>
+              <option value="Trip Discount" style={{ background: '#0f172a' }}>⛺ Trip Discount</option>
+              <option value="Event Entry" style={{ background: '#0f172a' }}>🎟️ Event Pass</option>
+              <option value="Books/Merch" style={{ background: '#0f172a' }}>📚 Books / Merch</option>
+              <option value="Other" style={{ background: '#0f172a' }}>✨ Custom Reward</option>
             </select>
           </div>
 
@@ -579,7 +755,9 @@ const Wallet = ({ currentUser }) => {
         </form>
       </div>
 
-      {/* 📜 TRANSACTION HISTORY LEDGER */}
+      
+
+  {/* 📜 TRANSACTION HISTORY LEDGER */}
       <div style={{
         background: 'rgba(15, 23, 42, 0.75)',
         backdropFilter: 'blur(20px)',
@@ -648,9 +826,11 @@ const Wallet = ({ currentUser }) => {
           </div>
         )}
       </div>
-
     </div>
-  );
+  )}
+
+</div>
+);
 };
 
 export default Wallet;

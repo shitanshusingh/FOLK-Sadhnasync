@@ -713,3 +713,51 @@ input[type="time"].form-control {
     height: 20px;
   }
 }
+
+/* 📱 STRICT ZERO-SCROLL NATIVE MOBILE APP CONTAINER STYLES */
+@media (max-width: 768px) {
+  html, body {
+    height: 100dvh;
+    overflow: hidden;
+    touch-action: manipulation;
+  }
+  
+  .app-container {
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .navbar {
+    flex-shrink: 0;
+  }
+  
+  .main-bottom-nav {
+    flex-shrink: 0;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+  }
+
+  .main-content {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 0.8rem;
+    padding-bottom: 5.5rem;
+  }
+
+  footer {
+    display: none !important; /* Hide footer on mobile app view for zero scroll feel */
+  }
+}
+
+@keyframes fade-in-up { 0% { opacity: 0; transform: translateY(10px) scale(0.95); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
+.calendar-cell-animate { animation: fade-in-up 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; opacity: 0; }
+
+.sadhana-table td { padding: 0.5rem 0.75rem !important; }
+.sadhana-table th { padding: 0.5rem 0.75rem !important; }

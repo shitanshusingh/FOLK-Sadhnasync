@@ -290,14 +290,14 @@ const BucketList = ({ currentUser }) => {
       </div>
 
       <nav className="tabs-bar" style={{ background: 'transparent', border: 'none', padding: 0, marginBottom: '1.5rem' }}>
-        <div className="tabs-container" style={{ gap: '1rem' }}>
-          <button className={`tab-item ${activeTab === 'seva' ? 'active' : ''}`} style={{ background: activeTab === 'seva' ? 'rgba(245, 158, 11, .12)' : 'var(--bg-card)', border: '1px solid var(--border-subtle)' }} onClick={() => setActiveTab('seva')}>
+        <div className="tabs-container" style={{ gap: '0.8rem', flexWrap: 'wrap', overflowX: 'visible' }}>
+          <button className={`tab-item ${activeTab === 'seva' ? 'active' : ''}`} style={{ flex: 1, minWidth: '150px', justifyContent: 'center', background: activeTab === 'seva' ? 'rgba(245, 158, 11, .12)' : 'var(--bg-card)', border: '1px solid var(--border-subtle)' }} onClick={() => setActiveTab('seva')}>
             <ListTodo size={16} /> 1. Seva To-Do List
           </button>
-          <button className={`tab-item ${activeTab === 'topics' ? 'active' : ''}`} style={{ background: activeTab === 'topics' ? 'rgba(245, 158, 11, .12)' : 'var(--bg-card)', border: '1px solid var(--border-subtle)' }} onClick={() => setActiveTab('topics')}>
+          <button className={`tab-item ${activeTab === 'topics' ? 'active' : ''}`} style={{ flex: 1, minWidth: '150px', justifyContent: 'center', background: activeTab === 'topics' ? 'rgba(245, 158, 11, .12)' : 'var(--bg-card)', border: '1px solid var(--border-subtle)' }} onClick={() => setActiveTab('topics')}>
             <Brain size={16} /> 2. Philosophy Topics
           </button>
-          <button className={`tab-item ${activeTab === 'books' ? 'active' : ''}`} style={{ background: activeTab === 'books' ? 'rgba(245, 158, 11, .12)' : 'var(--bg-card)', border: '1px solid var(--border-subtle)' }} onClick={() => setActiveTab('books')}>
+          <button className={`tab-item ${activeTab === 'books' ? 'active' : ''}`} style={{ flex: 1, minWidth: '150px', justifyContent: 'center', background: activeTab === 'books' ? 'rgba(245, 158, 11, .12)' : 'var(--bg-card)', border: '1px solid var(--border-subtle)' }} onClick={() => setActiveTab('books')}>
             <BookOpen size={16} /> 3. Prabhupada Books
           </button>
         </div>

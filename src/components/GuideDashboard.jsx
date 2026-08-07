@@ -1,3 +1,4 @@
+import WalletComponent from './Wallet';
 import React, { useState, useEffect } from 'react';
 import {
   Users, Building2, Flag, Send, CheckSquare, BarChart2,
@@ -620,6 +621,7 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
             {devoteeTab === 'tracker' && <SadhanaTracker currentUser={selectedDevotee} prefilledDate={null} />}
             {devoteeTab === 'leaderboard' && <Leaderboard currentUser={selectedDevotee} />}
             {devoteeTab === 'bucket' && <BucketList currentUser={selectedDevotee} />}
+        {devoteeTab === 'wallet' && <WalletComponent currentUser={selectedDevotee} />}
           </div>
         )}
 

@@ -399,3 +399,19 @@ export const cloudFetchAllRedemptions = async () => {
   }
   return JSON.parse(localStorage.getItem('currency_redemptions') || '[]');
 };
+
+
+// 11. Story Reactions Sync
+export const cloudSaveReaction = async (reactionKey, reactionsArray) => {
+  if (!reactionKey) return;
+  safeSetItem(reactionKey, reactionsArray);
+
+  if (isCloudActive && db) {
+    try {
+      const docRef = doc(db, 'story_reactions', reactionKey);
+      await setDoc(docRef, { key: reactionKey, reactions: reactionsArray });
+    } catch (e) {
+      console.warn("Failed to cloud save reaction:", e);
+    }
+  }
+};

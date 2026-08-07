@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Download, ChevronLeft, ChevronRight, User, AlertCircle, Flame, Target, X, CheckCircle, Clock, Edit3, Activity, Trophy, BookOpen, Star, Zap } from 'lucide-react';
+import { Download, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, User, AlertCircle, Flame, Target, X, CheckCircle, Clock, Edit3, Activity, Trophy, BookOpen, Star, Zap, Calendar } from 'lucide-react';
 import { format, parseISO, isWithinInterval, subDays, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, isBefore, isAfter, differenceInDays, startOfToday, startOfYear, endOfYear, differenceInMinutes } from 'date-fns';
 import { calculatePoints, getAbsentCode } from '../utils/scoring';
 import StoryViewer from './StoryViewer';
@@ -33,6 +33,7 @@ const Dashboard = ({ currentUser, setActiveTab, setPrefilledDate }) => {
   }, [currentUser?.photo]);
 
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
+  const [dashboardTab, setDashboardTab] = useState('overview');
   const [activeNotification, setActiveNotification] = useState(null);
   useEffect(() => {
     const notifs = JSON.parse(localStorage.getItem('sadhana_notifications_array') || '[]');
@@ -90,6 +91,7 @@ const Dashboard = ({ currentUser, setActiveTab, setPrefilledDate }) => {
     setShowGoalModal(false);
   };
   
+  const [expandedReportDate, setExpandedReportDate] = useState(null);
   const [dateFilterType, setDateFilterType] = useState('month'); 
   const [fromDate, setFromDate] = useState(format(startOfMonth(today), 'yyyy-MM-dd'));
   const [toDate, setToDate] = useState(format(endOfMonth(today), 'yyyy-MM-dd'));
@@ -423,28 +425,20 @@ const Dashboard = ({ currentUser, setActiveTab, setPrefilledDate }) => {
   };
 
   const handleCalendarClick = (dStr) => {
-    if (!isBefore(parseISO(dStr), addMonths(today, 0)) && dStr !== todayStr) return;
     setPreviewDate(dStr);
   };
 
   const handleCalendarDoubleClick = (dStr) => {
-    if (!isBefore(parseISO(dStr), addMonths(today, 0)) && dStr !== todayStr) return;
     setPreviewDate(null);
     setPrefilledDate(dStr);
     setActiveTab('tracker');
   };
 
   const handleDayInteraction = (dStr) => {
-    if (clickTimeoutRef.current) {
-      clearTimeout(clickTimeoutRef.current);
-      clickTimeoutRef.current = null;
-      handleCalendarDoubleClick(dStr);
-    } else {
-      clickTimeoutRef.current = setTimeout(() => {
-        handleCalendarClick(dStr);
-        clickTimeoutRef.current = null;
-      }, 250);
-    }
+    // We removed the artificial 300ms double-tap delay to make the calendar 100% instant!
+    // Now a single tap instantly opens the preview. From there, users can tap "Open Full Entry" 
+    // to edit. This is much faster and standard for modern mobile UX.
+    handleCalendarClick(dStr);
   };
 
   const handleQuickAbsent = (dStr) => {
@@ -634,11 +628,14 @@ const Dashboard = ({ currentUser, setActiveTab, setPrefilledDate }) => {
 
     for (const u of matchedUsers) {
        const userHistory = JSON.parse(localStorage.getItem(`sadhana_history_${u.email}`) || '[]');
-       const todayEntry = userHistory.find(e => e.date === todayStr);
-       const yesterdayEntry = userHistory.find(e => e.date === yesterdayStr);
-       const twoDaysAgoEntry = userHistory.find(e => e.date === twoDaysAgoStr);
-       
-       const recentEntries = [twoDaysAgoEntry, yesterdayEntry, todayEntry].filter(e => e && e.score > 0);
+       const nowTime = new Date();
+       const recentEntries = userHistory.filter(e => {
+         if (!e || !e.date || e.score <= 0) return false;
+         try {
+           const entryDate = parseISO(e.date);
+           return Math.abs(differenceInMinutes(nowTime, entryDate)) <= 1440; // 24 Hours
+         } catch(err) { return false; }
+       });
 
        if (recentEntries.length > 0) {
           active.push({ user: u, entries: recentEntries, latest: recentEntries[recentEntries.length - 1] });
@@ -660,7 +657,9 @@ const Dashboard = ({ currentUser, setActiveTab, setPrefilledDate }) => {
   }, [currentUser, todayStr, yesterdayStr, viewedStories]);
 
   return (
-    <div className="animate-fade-in" style={{ paddingBottom: '4rem', maxWidth: '1050px', margin: '0 auto', position: 'relative' }}>
+    <div className="animate-fade-in" style={{ paddingBottom: '6rem', maxWidth: '1050px', margin: '0 auto', position: 'relative' }}>
+
+
 
       {/* WhatsApp Style Sadhana Status Feed */}
       {todayFeedUsers.length > 0 && (
@@ -792,7 +791,100 @@ const Dashboard = ({ currentUser, setActiveTab, setPrefilledDate }) => {
         </div>
       )}
 
-      {/* Global Month Selector */}
+      {dashboardTab === 'overview' && (
+  <div className="animate-fade-in">
+  {/* Monthly Overview Calendar */}
+      <div className="panel" style={{ padding: '1.5rem', marginBottom: '2rem' }}>
+        <h3 className="panel-title" style={{ marginBottom: '1.5rem' }}>Monthly Overview <span style={{fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'normal'}}>(Double-click to edit)</span></h3>
+        
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', fontWeight: '600', marginBottom: '1.5rem', color: 'var(--text-muted)' }}>
+          <span style={{ color: 'var(--accent-emerald)', display: 'flex', alignItems: 'center', gap: '4px' }}><User size={12} /> Present</span>
+          <span style={{ color: 'var(--accent-rose)', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={12} /> Incomplete</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span style={{ width: '12px', height: '12px', background: 'rgba(217, 70, 239, 0.3)', border: '1px solid #d946ef', display: 'inline-block', borderRadius: '2px' }}></span> Regularize
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span style={{ width: '12px', height: '12px', background: 'rgba(244, 63, 94, 0.3)', border: '1px solid #f43f5e', display: 'inline-block', borderRadius: '2px' }}></span> Absent
+          </span>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', color: 'var(--primary-amber)', fontWeight: 'bold' }}>
+          <button className="nav-btn btn-secondary" onClick={prevMonth} style={{ padding: '0.4rem' }}><ChevronLeft size={16} /></button>
+          <span style={{ fontSize: '1.1rem' }}>{format(calendarDate, 'MMMM yyyy')}</span>
+          <button className="nav-btn btn-secondary" onClick={nextMonth} style={{ padding: '0.4rem' }}><ChevronRight size={16} /></button>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '8px', userSelect: 'none' }}>
+          <div style={{ textAlign: 'center', fontSize: '0.8rem', color: 'var(--primary-amber)', paddingBottom: '0.5rem' }}>Mon</div>
+          <div style={{ textAlign: 'center', fontSize: '0.8rem', color: 'var(--primary-amber)', paddingBottom: '0.5rem' }}>Tue</div>
+          <div style={{ textAlign: 'center', fontSize: '0.8rem', color: 'var(--primary-amber)', paddingBottom: '0.5rem' }}>Wed</div>
+          <div style={{ textAlign: 'center', fontSize: '0.8rem', color: 'var(--primary-amber)', paddingBottom: '0.5rem' }}>Thu</div>
+          <div style={{ textAlign: 'center', fontSize: '0.8rem', color: 'var(--primary-amber)', paddingBottom: '0.5rem' }}>Fri</div>
+          <div style={{ textAlign: 'center', fontSize: '0.8rem', color: 'var(--primary-amber)', paddingBottom: '0.5rem' }}>Sat</div>
+          <div style={{ textAlign: 'center', fontSize: '0.8rem', color: 'var(--primary-amber)', paddingBottom: '0.5rem' }}>Sun</div>
+
+          {Array.from({ length: blanksToPrefix }).map((_, i) => (
+            <div key={`blank-${i}`}></div>
+          ))}
+          
+          {daysInMonth.map((d, idx) => {
+            const dStr = format(d, 'yyyy-MM-dd');
+            const status = getDayStatus(dStr);
+            
+            let bg = 'var(--bg-main)';
+            let dot = null;
+            let borderColor = 'var(--border-subtle)';
+            
+            if (status === 'regularize') { bg = 'rgba(217, 70, 239, 0.15)'; borderColor = 'rgba(217, 70, 239, 0.4)'; }
+            else if (status === 'absent') { bg = 'rgba(244, 63, 94, 0.15)'; borderColor = 'rgba(244, 63, 94, 0.4)'; }
+            else if (status === 'present') dot = 'var(--accent-emerald)';
+            else if (status === 'incomplete') dot = 'var(--accent-rose)';
+
+            return (
+              <div 
+                key={dStr}
+                onClick={() => handleDayInteraction(dStr)}
+                className="calendar-cell-animate"
+                style={{
+                  position: 'relative',
+                  height: '50px',
+                  background: bg,
+                  border: `1px solid ${borderColor}`,
+                  borderRadius: '6px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'var(--text-main)',
+                  fontSize: '1rem',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  boxShadow: previewDate === dStr ? '0 0 0 2px var(--primary-amber)' : 'none',
+                  animationDelay: `${idx * 15}ms`
+                }}
+              >
+                {format(d, 'd')}
+                {dot && <div style={{ position: 'absolute', top: '4px', right: '4px', width: '6px', height: '6px', borderRadius: '50%', background: dot }}></div>}
+                {status !== 'empty' && status !== 'regularize' && status !== 'absent' && (
+                  <User size={12} style={{ position: 'absolute', bottom: '4px', left: '4px', color: dot === 'var(--accent-emerald)' ? 'var(--accent-emerald)' : 'var(--text-muted)' }} />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      
+
+
+
+{/* KEY 2: AUGUST SUMMARY & PIE CHART VIEW */}
+      </div>
+)}
+
+{dashboardTab === 'summary' && (
+  <div className="animate-fade-in">
+  {/* Global Month Selector */}
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1.5rem', marginBottom: '1.5rem' }}>
         <button className="nav-btn btn-secondary" onClick={() => { setSlideDirection('left'); setDashboardDate(subMonths(dashboardDate, 1)); }} style={{ padding: '0.5rem', borderRadius: '50%' }}>
           <ChevronLeft size={20} />
@@ -868,88 +960,10 @@ const Dashboard = ({ currentUser, setActiveTab, setPrefilledDate }) => {
         </div>
       </div>
 
-      {/* Monthly Overview Calendar */}
-      <div className="panel" style={{ padding: '1.5rem', marginBottom: '2rem' }}>
-        <h3 className="panel-title" style={{ marginBottom: '1.5rem' }}>Monthly Overview <span style={{fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'normal'}}>(Double-click to edit)</span></h3>
-        
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', fontWeight: '600', marginBottom: '1.5rem', color: 'var(--text-muted)' }}>
-          <span style={{ color: 'var(--accent-emerald)', display: 'flex', alignItems: 'center', gap: '4px' }}><User size={12} /> Present</span>
-          <span style={{ color: 'var(--accent-rose)', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={12} /> Incomplete</span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span style={{ width: '12px', height: '12px', background: 'rgba(217, 70, 239, 0.3)', border: '1px solid #d946ef', display: 'inline-block', borderRadius: '2px' }}></span> Regularize
-          </span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span style={{ width: '12px', height: '12px', background: 'rgba(244, 63, 94, 0.3)', border: '1px solid #f43f5e', display: 'inline-block', borderRadius: '2px' }}></span> Absent
-          </span>
-        </div>
-
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', color: 'var(--primary-amber)', fontWeight: 'bold' }}>
-          <button className="nav-btn btn-secondary" onClick={prevMonth} style={{ padding: '0.4rem' }}><ChevronLeft size={16} /></button>
-          <span style={{ fontSize: '1.1rem' }}>{format(calendarDate, 'MMMM yyyy')}</span>
-          <button className="nav-btn btn-secondary" onClick={nextMonth} style={{ padding: '0.4rem' }}><ChevronRight size={16} /></button>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '8px' }}>
-          <div style={{ textAlign: 'center', fontSize: '0.8rem', color: 'var(--primary-amber)', paddingBottom: '0.5rem' }}>Mon</div>
-          <div style={{ textAlign: 'center', fontSize: '0.8rem', color: 'var(--primary-amber)', paddingBottom: '0.5rem' }}>Tue</div>
-          <div style={{ textAlign: 'center', fontSize: '0.8rem', color: 'var(--primary-amber)', paddingBottom: '0.5rem' }}>Wed</div>
-          <div style={{ textAlign: 'center', fontSize: '0.8rem', color: 'var(--primary-amber)', paddingBottom: '0.5rem' }}>Thu</div>
-          <div style={{ textAlign: 'center', fontSize: '0.8rem', color: 'var(--primary-amber)', paddingBottom: '0.5rem' }}>Fri</div>
-          <div style={{ textAlign: 'center', fontSize: '0.8rem', color: 'var(--primary-amber)', paddingBottom: '0.5rem' }}>Sat</div>
-          <div style={{ textAlign: 'center', fontSize: '0.8rem', color: 'var(--primary-amber)', paddingBottom: '0.5rem' }}>Sun</div>
-
-          {Array.from({ length: blanksToPrefix }).map((_, i) => (
-            <div key={`blank-${i}`}></div>
-          ))}
-          
-          {daysInMonth.map(d => {
-            const dStr = format(d, 'yyyy-MM-dd');
-            const status = getDayStatus(dStr);
-            
-            let bg = 'var(--bg-main)';
-            let dot = null;
-            let borderColor = 'var(--border-subtle)';
-            
-            if (status === 'regularize') { bg = 'rgba(217, 70, 239, 0.15)'; borderColor = 'rgba(217, 70, 239, 0.4)'; }
-            else if (status === 'absent') { bg = 'rgba(244, 63, 94, 0.15)'; borderColor = 'rgba(244, 63, 94, 0.4)'; }
-            else if (status === 'present') dot = 'var(--accent-emerald)';
-            else if (status === 'incomplete') dot = 'var(--accent-rose)';
-
-            return (
-              <div 
-                key={dStr}
-                onClick={() => handleDayInteraction(dStr)}
-                style={{
-                  position: 'relative',
-                  height: '50px',
-                  background: bg,
-                  border: `1px solid ${borderColor}`,
-                  borderRadius: '6px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'var(--text-main)',
-                  fontSize: '1rem',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  transition: 'transform 0.2s',
-                  boxShadow: previewDate === dStr ? '0 0 0 2px var(--primary-amber)' : 'none'
-                }}
-              >
-                {format(d, 'd')}
-                {dot && <div style={{ position: 'absolute', top: '4px', right: '4px', width: '6px', height: '6px', borderRadius: '50%', background: dot }}></div>}
-                {status !== 'empty' && status !== 'regularize' && status !== 'absent' && (
-                  <User size={12} style={{ position: 'absolute', bottom: '4px', left: '4px', color: dot === 'var(--accent-emerald)' ? 'var(--accent-emerald)' : 'var(--text-muted)' }} />
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
 
       {/* Calendar Preview Modal via Portal */}
       {previewDate && typeof document !== 'undefined' && createPortal(
-        <div style={{
+        <div onClick={() => setPreviewDate(null)} style={{
           position: 'fixed',
           top: 0, left: 0, right: 0, bottom: 0,
           backgroundColor: 'rgba(0, 0, 0, 0.75)',
@@ -1029,7 +1043,12 @@ const Dashboard = ({ currentUser, setActiveTab, setPrefilledDate }) => {
         document.body
       )}
 
-      {/* Analytics Carousel */}
+        </div>
+)}
+
+{dashboardTab === 'analytics' && (
+  <div className="animate-fade-in">
+  {/* Analytics Carousel */}
       <div ref={chartRef} className="panel" style={{ padding: '1.5rem', marginBottom: '2rem', position: 'relative' }}>
         <h3 className="panel-title" style={{ marginBottom: '1.5rem' }}>Detailed Visualizations</h3>
         
@@ -1187,7 +1206,12 @@ const Dashboard = ({ currentUser, setActiveTab, setPrefilledDate }) => {
         </div>
       </div>
 
-      {/* ═══ SĀDHANA HISTORY & DETAILED REPORTS SECTION ═══ */}
+        </div>
+)}
+
+{dashboardTab === 'reports' && (
+  <div className="animate-fade-in">
+  {/* ═══ SĀDHANA HISTORY & DETAILED REPORTS SECTION ═══ */}
       <div className="panel" style={{ padding: '1.6rem', marginBottom: '1.5rem', borderRadius: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.2rem' }}>
           <div>
@@ -1195,15 +1219,15 @@ const Dashboard = ({ currentUser, setActiveTab, setPrefilledDate }) => {
             <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>Real-Time Synchronized Sādhana Analytics</div>
           </div>
 
-          {/* Date Filter Pills - Touch Scrollable on Mobile */}
-          <div style={{ display: 'flex', gap: '0.4rem', overflowX: 'auto', maxWidth: '100%', paddingBottom: '4px', alignItems: 'center' }}>
+          {/* Date Filter Pills - Perfect 3x2 Grid for Mobile */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', width: '100%', paddingBottom: '4px' }}>
             <button onClick={() => handleDateFilterClick('today')} className={`nav-btn ${dateFilterType === 'today' ? 'btn-primary' : 'btn-secondary'}`} style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem', borderRadius: '10px', whiteSpace: 'nowrap' }}>Today</button>
             <button onClick={() => handleDateFilterClick('month')} className={`nav-btn ${dateFilterType === 'month' ? 'btn-primary' : 'btn-secondary'}`} style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem', borderRadius: '10px', whiteSpace: 'nowrap' }}>This Month</button>
             <button onClick={() => handleDateFilterClick('last_month')} className={`nav-btn ${dateFilterType === 'last_month' ? 'btn-primary' : 'btn-secondary'}`} style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem', borderRadius: '10px', whiteSpace: 'nowrap' }}>Last Month</button>
             <button onClick={() => handleDateFilterClick('year')} className={`nav-btn ${dateFilterType === 'year' ? 'btn-primary' : 'btn-secondary'}`} style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem', borderRadius: '10px', whiteSpace: 'nowrap' }}>This Year</button>
             <button onClick={() => handleDateFilterClick('custom')} className={`nav-btn ${dateFilterType === 'custom' ? 'btn-primary' : 'btn-secondary'}`} style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem', borderRadius: '10px', whiteSpace: 'nowrap' }}>Custom Range</button>
             
-            <button onClick={triggerPdfExport} className="nav-btn btn-secondary" style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem', borderRadius: '10px', marginLeft: '0.2rem', borderColor: '#f59e0b', color: '#f59e0b', whiteSpace: 'nowrap' }}>
+            <button onClick={handleDownloadReport} className="nav-btn btn-secondary" style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem', borderRadius: '10px', borderColor: '#f59e0b', color: '#f59e0b', whiteSpace: 'nowrap' }}>
               <Download size={14} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: '4px' }} /> Export PDF
             </button>
           </div>
@@ -1330,85 +1354,157 @@ const Dashboard = ({ currentUser, setActiveTab, setPrefilledDate }) => {
           })()}
         </div>
 
-        <div className="table-responsive">
-          <table className="custom-table" style={{ fontSize: '0.85rem', textAlign: 'center' }}>
-            <thead>
-              <tr>
-                <th style={{ textAlign: 'left' }}>Date</th>
-                <th>MA</th>
-                <th>JP</th>
-                <th>JP End</th>
-                <th>Read (Pts)</th>
-                <th>Read (M)</th>
-                <th>SB</th>
-                <th>Yoga</th>
-                <th>Sleep</th>
-                <th>Wake</th>
-                <th>Pts</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredHistory.length === 0 ? (
-                <tr><td colSpan="11" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>No records found for this period.</td></tr>
-              ) : (
-                filteredHistory.map(entry => {
-                  const getVal = (act) => entry.activityTimes?.[act] ? calculatePoints(act, entry.activityTimes[act]) : getAbsentCode(entry.details?.absentReason);
-                  
-                  return (
-                    <tr key={entry.date}>
-                      <td style={{ textAlign: 'left', fontWeight: '500', color: 'var(--primary-amber)' }}>{format(parseISO(entry.date), 'dd MMM')}</td>
-                      <td>{getVal('mangala_arati')}</td>
-                      <td>{getVal('japa')}</td>
-                      <td style={{ color: 'var(--accent-emerald)' }}>{entry.details?.chantingCompletionTime || '-'}</td>
-                      <td>{getVal('reading')}</td>
-                      <td style={{ color: 'var(--accent-blue)' }}>{entry.details?.readingDuration || '0'}</td>
-                      <td>{getVal('class')}</td>
-                      <td>{getVal('yoga')}</td>
-                      <td style={{ color: 'var(--text-muted)' }}>{entry.details?.sleepTime || '-'}</td>
-                      <td style={{ color: 'var(--text-muted)' }}>{entry.details?.wakeupTime || '-'}</td>
-                      <td style={{ fontWeight: 'bold', color: entry.score >= 16 ? 'var(--accent-emerald)' : 'var(--text-main)' }}>{entry.score}</td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
+        {/* 📱 STREAMLINED ACCORDION SĀDHANA CARDS (Zero Wide Scroll!) */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', maxHeight: '420px', overflowY: 'auto', paddingRight: '4px' }}>
+          {filteredHistory.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>No Sādhana records found for selected filter.</div>
+          ) : (
+            filteredHistory.map(entry => {
+              const isExpanded = expandedReportDate === entry.date;
+              return (
+                <div key={entry.date} style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '12px', overflow: 'hidden' }}>
+                  <div 
+                    onClick={() => setExpandedReportDate(isExpanded ? null : entry.date)}
+                    style={{ padding: '0.8rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', background: isExpanded ? 'rgba(245, 158, 11, 0.08)' : 'transparent' }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <Calendar size={16} color="#f59e0b" />
+                      <strong style={{ fontSize: '0.9rem', color: 'var(--text-main)' }}>{format(parseISO(entry.date), 'EEE, dd MMM yyyy')}</strong>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <span style={{ fontWeight: '800', fontSize: '0.95rem', color: entry.score >= 16 ? '#10b981' : '#f59e0b' }}>
+                        {entry.score} pts
+                      </span>
+                      {isExpanded ? <ChevronUp size={16} color="#94a3b8" /> : <ChevronDown size={16} color="#94a3b8" />}
+                    </div>
+                  </div>
+
+                  {isExpanded && (
+                    <div style={{ padding: '1rem', borderTop: '1px solid var(--border-subtle)', background: 'var(--bg-main)', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.8rem', fontSize: '0.82rem' }}>
+                      <div><span style={{ color: 'var(--text-muted)' }}>Maṅgala Ārati:</span> <strong>{entry.activityTimes?.mangala_arati || '--'}</strong></div>
+                      <div><span style={{ color: 'var(--text-muted)' }}>Japa Time:</span> <strong>{entry.activityTimes?.japa || '--'}</strong></div>
+                      <div><span style={{ color: 'var(--text-muted)' }}>Rounds:</span> <strong>{entry.details?.totalRounds || 0}</strong></div>
+                      <div><span style={{ color: 'var(--text-muted)' }}>Reading (mins):</span> <strong>{entry.details?.readingDuration || 0}m</strong></div>
+                      <div><span style={{ color: 'var(--text-muted)' }}>Hearing (mins):</span> <strong>{entry.details?.hearingDuration || 0}m</strong></div>
+                      <div><span style={{ color: 'var(--text-muted)' }}>SB Class:</span> <strong>{entry.activityTimes?.class || '--'}</strong></div>
+                      <div><span style={{ color: 'var(--text-muted)' }}>Sleep / Wakeup:</span> <strong>{entry.details?.sleepTime || '--'} / {entry.details?.wakeupTime || '--'}</strong></div>
+                      <div style={{ gridColumn: '1 / -1', marginTop: '0.4rem' }}>
+                        <button className="nav-btn btn-primary" onClick={() => handleCalendarDoubleClick(entry.date)} style={{ padding: '0.4rem 0.8rem', fontSize: '0.78rem' }}>
+                          ✏️ Edit Entry for {entry.date}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
+    </div>
+)}
 
-      {/* PDF Export Settings Modal */}
-      {showPdfSettings && typeof document !== 'undefined' && createPortal(
+      {/* 👑 FIXED POSITION FLOATING DASHBOARD KEY SWITCHER (PORTALED TO BODY TO PREVENT ANY JUMPING) */}
+      {typeof document !== 'undefined' && createPortal(
         <div style={{
           position: 'fixed',
-          top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.75)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 99999, padding: '1rem'
+          bottom: '82px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 9995,
+          display: 'flex',
+          alignItems: 'center',
+          justify: 'center',
+          gap: '0.35rem',
+          background: 'rgba(15, 23, 42, 0.94)',
+          backdropFilter: 'blur(20px)',
+          padding: '0.35rem',
+          borderRadius: '35px',
+          border: '1.5px solid rgba(245, 158, 11, 0.45)',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.6)',
+          width: 'calc(100% - 2rem)',
+          maxWidth: '440px'
         }}>
-          <div onClick={e => e.stopPropagation()} style={{
-            backgroundColor: 'var(--bg-card)', padding: '2rem', borderRadius: '16px',
-            border: '1px solid var(--border-highlight)', width: '100%', maxWidth: '400px',
-            boxShadow: 'var(--shadow-main)', color: 'var(--text-main)'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h3 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.2rem' }}>Export PDF Settings</h3>
-              <button onClick={() => setShowPdfSettings(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={24} /></button>
-            </div>
-            
-            <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>Customize what to include in your report.</p>
+          <button 
+            onClick={() => { setDashboardTab('overview'); setPreviewDate(null); }}
+            style={{
+              flex: 1,
+              padding: '0.6rem 0.5rem',
+              borderRadius: '25px',
+              border: 'none',
+              background: dashboardTab === 'overview' ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 'transparent',
+              color: dashboardTab === 'overview' ? '#fff' : '#94a3b8',
+              fontWeight: '800',
+              fontSize: '0.78rem',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              whiteSpace: 'nowrap',
+              boxShadow: dashboardTab === 'overview' ? '0 4px 12px rgba(245, 158, 11, 0.35)' : 'none'
+            }}
+          >
+            📅 Calendar
+          </button>
 
-            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', marginBottom: '2rem' }} className="custom-checkbox">
-              <input type="checkbox" checked={includeGraphInPdf} onChange={(e) => setIncludeGraphInPdf(e.target.checked)} style={{ display: 'none' }} />
-              <div style={{ width: '20px', height: '20px', borderRadius: '4px', border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: includeGraphInPdf ? 'var(--primary-amber)' : 'var(--bg-input)' }}>
-                {includeGraphInPdf && <CheckCircle size={14} color="#fff" />}
-              </div>
-              <span style={{ fontSize: '0.95rem' }}>Include currently active graph</span>
-            </label>
+          <button 
+            onClick={() => { setDashboardTab('summary'); setPreviewDate(null); }}
+            style={{
+              flex: 1,
+              padding: '0.6rem 0.5rem',
+              borderRadius: '25px',
+              border: 'none',
+              background: dashboardTab === 'summary' ? 'linear-gradient(135deg, #10b981, #059669)' : 'transparent',
+              color: dashboardTab === 'summary' ? '#fff' : '#94a3b8',
+              fontWeight: '800',
+              fontSize: '0.78rem',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              whiteSpace: 'nowrap',
+              boxShadow: dashboardTab === 'summary' ? '0 4px 12px rgba(16, 185, 129, 0.35)' : 'none'
+            }}
+          >
+            📊 Summary
+          </button>
 
-            <button onClick={() => { setShowPdfSettings(false); handleDownloadReport(); }} className="nav-btn btn-primary" style={{ width: '100%', padding: '0.8rem', justifyContent: 'center' }}>
-              Generate Report
-            </button>
-          </div>
+          <button 
+            onClick={() => { setDashboardTab('analytics'); setPreviewDate(null); }}
+            style={{
+              flex: 1,
+              padding: '0.6rem 0.5rem',
+              borderRadius: '25px',
+              border: 'none',
+              background: dashboardTab === 'analytics' ? 'linear-gradient(135deg, #3b82f6, #2563eb)' : 'transparent',
+              color: dashboardTab === 'analytics' ? '#fff' : '#94a3b8',
+              fontWeight: '800',
+              fontSize: '0.78rem',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              whiteSpace: 'nowrap',
+              boxShadow: dashboardTab === 'analytics' ? '0 4px 12px rgba(59, 130, 246, 0.35)' : 'none'
+            }}
+          >
+            📈 Graphs
+          </button>
+
+          <button 
+            onClick={() => { setDashboardTab('reports'); setPreviewDate(null); }}
+            style={{
+              flex: 1,
+              padding: '0.6rem 0.5rem',
+              borderRadius: '25px',
+              border: 'none',
+              background: dashboardTab === 'reports' ? 'linear-gradient(135deg, #8b5cf6, #7c3aed)' : 'transparent',
+              color: dashboardTab === 'reports' ? '#fff' : '#94a3b8',
+              fontWeight: '800',
+              fontSize: '0.78rem',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              whiteSpace: 'nowrap',
+              boxShadow: dashboardTab === 'reports' ? '0 4px 12px rgba(139, 92, 246, 0.35)' : 'none'
+            }}
+          >
+            📜 Reports
+          </button>
         </div>,
         document.body
       )}

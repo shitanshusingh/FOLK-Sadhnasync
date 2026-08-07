@@ -1,7 +1,5 @@
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import folkLogo from '../assets/folk_logo.png';
-import iskconLogo from '../assets/iskcon_logo.png';
+import { jsPDF } from 'jspdf';
+import 'jspdf-autotable';
 import { format, parseISO } from 'date-fns';
 import { calculatePoints, getAbsentCode } from './scoring';
 
@@ -23,19 +21,19 @@ export const generateSadhanaPDFReport = ({
   doc.setFillColor(245, 158, 11); // #f59e0b
   doc.rect(0, 42, pageWidth, 2.5, 'F');
 
-  // Add FOLK Logo to Header
-  try {
-    doc.addImage(folkLogo, 'PNG', 14, 8, 26, 26);
-  } catch (e) {
-    doc.setFillColor(245, 158, 11);
-    doc.circle(27, 21, 13, 'F');
-  }
+  // Add FOLK Logo placeholder
+  doc.setFillColor(245, 158, 11);
+  doc.circle(27, 21, 11, 'F');
+  doc.setTextColor(15, 23, 42);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.text('FOLK', 19, 23);
 
   // Header Title Text
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
-  doc.text('FOLK SĀDHANA PERFORMANCE REPORT', 46, 20);
+  doc.text('FOLK SADHANA PERFORMANCE REPORT', 46, 20);
 
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
@@ -92,7 +90,7 @@ export const generateSadhanaPDFReport = ({
   doc.setFont('helvetica', 'normal');
   doc.text(`${printDate}`, 145, 70);
 
-  // 3. OVERALL SĀDHANA ACTIVITY SUMMARY BOX (Inspired by User Screenshot!)
+  // 3. OVERALL SADHANA ACTIVITY SUMMARY BOX (Inspired by User Screenshot!)
   const totalDays = history.length || 1;
 
   const getActivityBreakdown = (actKey) => {
@@ -126,7 +124,7 @@ export const generateSadhanaPDFReport = ({
   const readingTimeStr = `${readingHrs}h:${readingMinsRem}m:0s`;
 
   // Draw Summary Table Box
-  autoTable(doc, {
+  doc.autoTable({
     startY: 88,
     head: [['ACTIVITY SUMMARY', 'OVERALL PERFORMANCE BREAKDOWN']],
     body: [
@@ -148,7 +146,7 @@ export const generateSadhanaPDFReport = ({
     margin: { left: 14, right: 14 }
   });
 
-  // 4. Daily Sādhana Log Table — Exactly matching Screenshot Columns!
+  // 4. Daily Sadhana Log Table — Exactly matching Screenshot Columns!
   // Columns: DATE | MA | JP | JP END | READ (PTS) | READ (M) | SB | YOGA | SLEEP | WAKE | PTS
   const tableRows = history.slice(0, 31).map(h => {
     const dStr = h.date ? format(parseISO(h.date), 'dd MMM') : '-';
@@ -180,10 +178,10 @@ export const generateSadhanaPDFReport = ({
 
   const nextTableStartY = (doc.lastAutoTable?.finalY ?? 88) + 6;
 
-  autoTable(doc, {
+  doc.autoTable({
     startY: nextTableStartY,
     head: [['DATE', 'MA', 'JP', 'JP END', 'READ (PTS)', 'READ (M)', 'SB', 'YOGA', 'SLEEP', 'WAKE', 'PTS']],
-    body: tableRows,
+    body: tableRows.length > 0 ? tableRows : [['No data', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-']],
     theme: 'grid',
     headStyles: { fillColor: [15, 23, 42], textColor: [245, 158, 11], fontStyle: 'bold', fontSize: 8, halign: 'center' },
     bodyStyles: { fontSize: 8, textColor: [30, 41, 59], halign: 'center' },
@@ -202,15 +200,13 @@ export const generateSadhanaPDFReport = ({
   doc.setDrawColor(226, 232, 240);
   doc.line(14, footerY - 5, pageWidth - 14, footerY - 5);
 
-  try {
-    doc.addImage(iskconLogo, 'PNG', 14, footerY, 18, 14);
-  } catch (e) {}
+
 
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(100, 116, 139);
   doc.text('© 2026 All rights reserved | ISKCON Bhadaj, Ahmedabad | Managed by FOLK', 36, footerY + 6);
-  doc.text('Official Sādhana Performance Document • Downloaded via FOLK SadhnaSync', 36, footerY + 11);
+  doc.text('Official Sadhana Performance Document • Downloaded via FOLK SadhanaSync', 36, footerY + 11);
 
   doc.save(`${(devotee.name || 'Devotee').replace(/\s+/g, '_')}_Sadhana_Report.pdf`);
 };
