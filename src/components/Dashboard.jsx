@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Download, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, User, AlertCircle, Flame, Target, X, CheckCircle, Clock, Edit3, Activity, Trophy, BookOpen, Star, Zap, Calendar } from 'lucide-react';
+import { Download, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, User, AlertCircle, Flame, Target, X, CheckCircle, Clock, Edit3, Activity, Trophy, BookOpen, Star, Zap, Calendar, LayoutGrid, BarChart2, FileText } from 'lucide-react';
 import { format, parseISO, isWithinInterval, subDays, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, isBefore, isAfter, differenceInDays, startOfToday, startOfYear, endOfYear, differenceInMinutes } from 'date-fns';
 import { calculatePoints, getAbsentCode } from '../utils/scoring';
 import StoryViewer from './StoryViewer';
@@ -37,7 +37,7 @@ const Dashboard = ({ currentUser, setActiveTab, setPrefilledDate }) => {
   const [activeNotification, setActiveNotification] = useState(null);
   useEffect(() => {
     const notifs = JSON.parse(localStorage.getItem('sadhana_notifications_array') || '[]');
-    const unseen = notifs.find(n => !n.seen);
+    const unseen = notifs.find(n => !n.seen && (!n.targetEmail || n.targetEmail === currentUser.email));
     if (unseen) {
       setActiveNotification(unseen);
       setShowNotificationsModal(true);
@@ -55,7 +55,7 @@ const Dashboard = ({ currentUser, setActiveTab, setPrefilledDate }) => {
 
   useEffect(() => {
     const notifs = JSON.parse(localStorage.getItem('sadhana_notifications_array') || '[]');
-    const unseen = notifs.some(n => !n.seen);
+    const unseen = notifs.some(n => !n.seen && (!n.targetEmail || n.targetEmail === currentUser.email));
     const goalsTab = document.querySelector('.tabs-container button:nth-child(4)');
     if (goalsTab) {
       if (unseen) {
@@ -460,32 +460,37 @@ const Dashboard = ({ currentUser, setActiveTab, setPrefilledDate }) => {
   };
 
   const handleDownloadReport = () => {
-    // Use the actual selected date filter range for the PDF (not always full month)
-    let pdfStartStr, pdfEndStr;
-    if (dateFilterType === 'custom' && fromDate && toDate) {
-      pdfStartStr = format(new Date(fromDate), 'dd MMM yyyy');
-      pdfEndStr = format(new Date(toDate), 'dd MMM yyyy');
-    } else if (dateFilterType === 'today') {
-      pdfStartStr = pdfEndStr = format(dashboardDate, 'dd MMM yyyy');
-    } else if (dateFilterType === 'last_month') {
-      const lastMonth = subMonths(dashboardDate, 1);
-      pdfStartStr = format(startOfMonth(lastMonth), 'dd MMM yyyy');
-      pdfEndStr = format(endOfMonth(lastMonth), 'dd MMM yyyy');
-    } else if (dateFilterType === 'year') {
-      pdfStartStr = format(startOfYear(dashboardDate), 'dd MMM yyyy');
-      pdfEndStr = format(endOfYear(dashboardDate), 'dd MMM yyyy');
-    } else {
-      pdfStartStr = format(startOfMonth(dashboardDate), 'dd MMM yyyy');
-      pdfEndStr = format(endOfMonth(dashboardDate), 'dd MMM yyyy');
-    }
+    try {
+      // Use the actual selected date filter range for the PDF (not always full month)
+      let pdfStartStr, pdfEndStr;
+      if (dateFilterType === 'custom' && fromDate && toDate) {
+        pdfStartStr = format(new Date(fromDate), 'dd MMM yyyy');
+        pdfEndStr = format(new Date(toDate), 'dd MMM yyyy');
+      } else if (dateFilterType === 'today') {
+        pdfStartStr = pdfEndStr = format(dashboardDate, 'dd MMM yyyy');
+      } else if (dateFilterType === 'last_month') {
+        const lastMonth = subMonths(dashboardDate, 1);
+        pdfStartStr = format(startOfMonth(lastMonth), 'dd MMM yyyy');
+        pdfEndStr = format(endOfMonth(lastMonth), 'dd MMM yyyy');
+      } else if (dateFilterType === 'year') {
+        pdfStartStr = format(startOfYear(dashboardDate), 'dd MMM yyyy');
+        pdfEndStr = format(endOfYear(dashboardDate), 'dd MMM yyyy');
+      } else {
+        pdfStartStr = format(startOfMonth(dashboardDate), 'dd MMM yyyy');
+        pdfEndStr = format(endOfMonth(dashboardDate), 'dd MMM yyyy');
+      }
 
-    generateSadhanaPDFReport({
-      devotee: currentUser,
-      history: filteredHistory,
-      guideName: currentUser.guide,
-      startDateStr: pdfStartStr,
-      endDateStr: pdfEndStr
-    });
+      generateSadhanaPDFReport({
+        devotee: currentUser,
+        history: filteredHistory,
+        guideName: currentUser.guide,
+        startDateStr: pdfStartStr,
+        endDateStr: pdfEndStr
+      });
+    } catch (err) {
+      alert("Failed to generate PDF: " + err.message);
+      console.error(err);
+    }
   };
 
   const exportJSON = () => {
@@ -632,8 +637,12 @@ const Dashboard = ({ currentUser, setActiveTab, setPrefilledDate }) => {
        const recentEntries = userHistory.filter(e => {
          if (!e || !e.date || e.score <= 0) return false;
          try {
-           const entryDate = parseISO(e.date);
-           return Math.abs(differenceInMinutes(nowTime, entryDate)) <= 1440; // 24 Hours
+           if (e.lastUpdated) {
+             const updatedDate = parseISO(e.lastUpdated);
+             return differenceInMinutes(nowTime, updatedDate) <= 1440 && differenceInMinutes(nowTime, updatedDate) >= 0;
+           } else {
+             return e.date === todayStr || e.date === yesterdayStr;
+           }
          } catch(err) { return false; }
        });
 
@@ -792,7 +801,7 @@ const Dashboard = ({ currentUser, setActiveTab, setPrefilledDate }) => {
       )}
 
       {dashboardTab === 'overview' && (
-  <div className="animate-fade-in">
+  <div className="animate-fade-in" style={{ paddingBottom: '160px' }}>
   {/* Monthly Overview Calendar */}
       <div className="panel" style={{ padding: '1.5rem', marginBottom: '2rem' }}>
         <h3 className="panel-title" style={{ marginBottom: '1.5rem' }}>Monthly Overview <span style={{fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'normal'}}>(Double-click to edit)</span></h3>
@@ -883,7 +892,7 @@ const Dashboard = ({ currentUser, setActiveTab, setPrefilledDate }) => {
 )}
 
 {dashboardTab === 'summary' && (
-  <div className="animate-fade-in">
+  <div className="animate-fade-in" style={{ paddingBottom: '160px' }}>
   {/* Global Month Selector */}
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1.5rem', marginBottom: '1.5rem' }}>
         <button className="nav-btn btn-secondary" onClick={() => { setSlideDirection('left'); setDashboardDate(subMonths(dashboardDate, 1)); }} style={{ padding: '0.5rem', borderRadius: '50%' }}>
@@ -961,93 +970,12 @@ const Dashboard = ({ currentUser, setActiveTab, setPrefilledDate }) => {
       </div>
 
 
-      {/* Calendar Preview Modal via Portal */}
-      {previewDate && typeof document !== 'undefined' && createPortal(
-        <div onClick={() => setPreviewDate(null)} style={{
-          position: 'fixed',
-          top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.75)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 99999, padding: '1rem'
-        }}>
-          
-          <div onClick={e => e.stopPropagation()} style={{
-            backgroundColor: 'var(--bg-card)', padding: '2rem', borderRadius: '16px',
-            border: '1px solid var(--border-highlight)', width: '100%', maxWidth: '350px',
-            boxShadow: 'var(--shadow-main)', color: 'var(--text-main)'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h3 style={{ margin: 0, color: 'var(--primary-amber)', fontSize: '1.2rem' }}>{format(parseISO(previewDate), 'EEEE, MMM do')}</h3>
-              <button onClick={() => setPreviewDate(null)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={24} /></button>
-            </div>
-            
-            {(() => {
-              const entry = history.find(e => e.date === previewDate);
-              if (!entry) {
-                return (
-                  <div style={{ textAlign: 'center' }}>
-                    <p style={{ color: '#94a3b8', marginBottom: '1.5rem' }}>No Sādhana filled for this date.</p>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-                      <button className="nav-btn btn-primary" onClick={() => handleCalendarDoubleClick(previewDate)} style={{ padding: '0.8rem' }}>Fill Entry</button>
-                      <button className="nav-btn btn-rose" onClick={() => handleQuickAbsent(previewDate)} style={{ padding: '0.8rem' }}>Mark Absent/Sick instantly</button>
-                    </div>
-                  </div>
-                )
-              }
-              return (
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', paddingBottom: '1rem', borderBottom: '1px solid #334155' }}>
-                    <span style={{ color: '#94a3b8' }}>Score</span>
-                    <span style={{ fontWeight: 'bold', fontSize: '1.2rem', color: entry.score >= 16 ? '#10b981' : '#f59e0b' }}>{entry.score} pts</span>
-                  </div>
-                  
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', fontSize: '0.95rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ color: '#cbd5e1' }}><Clock size={14} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'text-bottom' }}/>Maṅgala Ārati</span>
-                      <span style={{ fontWeight: 'bold' }}>{entry.activityTimes?.mangala_arati || '--'}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ color: '#cbd5e1' }}><Clock size={14} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'text-bottom' }}/>Japa</span>
-                      <span style={{ fontWeight: 'bold' }}>{entry.activityTimes?.japa || '--'}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ color: '#cbd5e1' }}><CheckCircle size={14} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'text-bottom' }}/>Rounds</span>
-                      <span style={{ fontWeight: 'bold' }}>{entry.details?.totalRounds || '0'}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ color: '#cbd5e1' }}><Clock size={14} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'text-bottom' }}/>JP Completion</span>
-                      <span style={{ fontWeight: 'bold' }}>{entry.details?.chantingCompletionTime || '--'}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ color: '#cbd5e1' }}><Clock size={14} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'text-bottom' }}/>Reading Time</span>
-                      <span style={{ fontWeight: 'bold' }}>{entry.activityTimes?.reading || '--'}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ color: '#cbd5e1' }}><CheckCircle size={14} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'text-bottom' }}/>Reading (Mins)</span>
-                      <span style={{ fontWeight: 'bold' }}>{entry.details?.readingDuration || '0'} min</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ color: '#cbd5e1' }}><Clock size={14} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'text-bottom' }}/>SB Class</span>
-                      <span style={{ fontWeight: 'bold' }}>{entry.activityTimes?.class || '--'}</span>
-                    </div>
-                  </div>
-
-                  <button className="nav-btn btn-secondary" style={{ width: '100%', marginTop: '1.5rem', padding: '0.8rem' }} onClick={() => handleCalendarDoubleClick(previewDate)}>
-                    Open Full Entry
-                  </button>
-                </div>
-              );
-            })()}
-          </div>
-        </div>,
-        document.body
-      )}
 
         </div>
 )}
 
 {dashboardTab === 'analytics' && (
-  <div className="animate-fade-in">
+  <div className="animate-fade-in" style={{ paddingBottom: '160px' }}>
   {/* Analytics Carousel */}
       <div ref={chartRef} className="panel" style={{ padding: '1.5rem', marginBottom: '2rem', position: 'relative' }}>
         <h3 className="panel-title" style={{ marginBottom: '1.5rem' }}>Detailed Visualizations</h3>
@@ -1210,7 +1138,7 @@ const Dashboard = ({ currentUser, setActiveTab, setPrefilledDate }) => {
 )}
 
 {dashboardTab === 'reports' && (
-  <div className="animate-fade-in">
+  <div className="animate-fade-in" style={{ paddingBottom: '160px' }}>
   {/* ═══ SĀDHANA HISTORY & DETAILED REPORTS SECTION ═══ */}
       <div className="panel" style={{ padding: '1.6rem', marginBottom: '1.5rem', borderRadius: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.2rem' }}>
@@ -1405,6 +1333,88 @@ const Dashboard = ({ currentUser, setActiveTab, setPrefilledDate }) => {
     </div>
 )}
 
+      {/* Calendar Preview Modal via Portal */}
+      {previewDate && typeof document !== 'undefined' && createPortal(
+        <div onClick={() => setPreviewDate(null)} style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.75)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 99999, padding: '1rem'
+        }}>
+          
+          <div onClick={e => e.stopPropagation()} style={{
+            backgroundColor: 'var(--bg-card)', padding: '2rem', borderRadius: '16px',
+            border: '1px solid var(--border-highlight)', width: '100%', maxWidth: '350px',
+            boxShadow: 'var(--shadow-main)', color: 'var(--text-main)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h3 style={{ margin: 0, color: 'var(--primary-amber)', fontSize: '1.2rem' }}>{format(parseISO(previewDate), 'EEEE, MMM do')}</h3>
+              <button onClick={() => setPreviewDate(null)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={24} /></button>
+            </div>
+            
+            {(() => {
+              const entry = history.find(e => e.date === previewDate);
+              if (!entry) {
+                return (
+                  <div style={{ textAlign: 'center' }}>
+                    <p style={{ color: '#94a3b8', marginBottom: '1.5rem' }}>No Sādhana filled for this date.</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                      <button className="nav-btn btn-primary" onClick={() => handleCalendarDoubleClick(previewDate)} style={{ padding: '0.8rem' }}>Fill Entry</button>
+                      <button className="nav-btn btn-rose" onClick={() => handleQuickAbsent(previewDate)} style={{ padding: '0.8rem' }}>Mark Absent/Sick instantly</button>
+                    </div>
+                  </div>
+                )
+              }
+              return (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', paddingBottom: '1rem', borderBottom: '1px solid #334155' }}>
+                    <span style={{ color: '#94a3b8' }}>Score</span>
+                    <span style={{ fontWeight: 'bold', fontSize: '1.2rem', color: entry.score >= 16 ? '#10b981' : '#f59e0b' }}>{entry.score} pts</span>
+                  </div>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', fontSize: '0.95rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: '#cbd5e1' }}><Clock size={14} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'text-bottom' }}/>Maṅgala Ārati</span>
+                      <span style={{ fontWeight: 'bold' }}>{entry.activityTimes?.mangala_arati || '--'}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: '#cbd5e1' }}><Clock size={14} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'text-bottom' }}/>Japa</span>
+                      <span style={{ fontWeight: 'bold' }}>{entry.activityTimes?.japa || '--'}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: '#cbd5e1' }}><CheckCircle size={14} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'text-bottom' }}/>Rounds</span>
+                      <span style={{ fontWeight: 'bold' }}>{entry.details?.totalRounds || '0'}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: '#cbd5e1' }}><Clock size={14} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'text-bottom' }}/>JP Completion</span>
+                      <span style={{ fontWeight: 'bold' }}>{entry.details?.chantingCompletionTime || '--'}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: '#cbd5e1' }}><Clock size={14} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'text-bottom' }}/>Reading Time</span>
+                      <span style={{ fontWeight: 'bold' }}>{entry.activityTimes?.reading || '--'}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: '#cbd5e1' }}><CheckCircle size={14} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'text-bottom' }}/>Reading (Mins)</span>
+                      <span style={{ fontWeight: 'bold' }}>{entry.details?.readingDuration || '0'} min</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: '#cbd5e1' }}><Clock size={14} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'text-bottom' }}/>SB Class</span>
+                      <span style={{ fontWeight: 'bold' }}>{entry.activityTimes?.class || '--'}</span>
+                    </div>
+                  </div>
+
+                  <button className="nav-btn btn-secondary" style={{ width: '100%', marginTop: '1.5rem', padding: '0.8rem' }} onClick={() => handleCalendarDoubleClick(previewDate)}>
+                    Open Full Entry
+                  </button>
+                </div>
+              );
+            })()}
+          </div>
+        </div>,
+        document.body
+      )}
+
       {/* 👑 FIXED POSITION FLOATING DASHBOARD KEY SWITCHER (PORTALED TO BODY TO PREVENT ANY JUMPING) */}
       {typeof document !== 'undefined' && createPortal(
         <div style={{
@@ -1414,97 +1424,69 @@ const Dashboard = ({ currentUser, setActiveTab, setPrefilledDate }) => {
           transform: 'translateX(-50%)',
           zIndex: 9995,
           display: 'flex',
+          justifyContent: 'space-between',
           alignItems: 'center',
-          justify: 'center',
-          gap: '0.35rem',
-          background: 'rgba(15, 23, 42, 0.94)',
-          backdropFilter: 'blur(20px)',
-          padding: '0.35rem',
-          borderRadius: '35px',
-          border: '1.5px solid rgba(245, 158, 11, 0.45)',
-          boxShadow: '0 10px 30px rgba(0,0,0,0.6)',
           width: 'calc(100% - 2rem)',
-          maxWidth: '440px'
+          maxWidth: '440px',
+          background: 'linear-gradient(180deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.85) 100%)',
+          backdropFilter: 'blur(20px)',
+          padding: '0.5rem 0.4rem',
+          borderRadius: '20px',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          borderTop: '1px solid rgba(255, 255, 255, 0.15)',
+          boxShadow: '0 10px 30px rgba(0, 0, 0, 0.5), inset 0 2px 10px rgba(255,255,255,0.05)'
         }}>
-          <button 
-            onClick={() => { setDashboardTab('overview'); setPreviewDate(null); }}
-            style={{
-              flex: 1,
-              padding: '0.6rem 0.5rem',
-              borderRadius: '25px',
-              border: 'none',
-              background: dashboardTab === 'overview' ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 'transparent',
-              color: dashboardTab === 'overview' ? '#fff' : '#94a3b8',
-              fontWeight: '800',
-              fontSize: '0.78rem',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-              whiteSpace: 'nowrap',
-              boxShadow: dashboardTab === 'overview' ? '0 4px 12px rgba(245, 158, 11, 0.35)' : 'none'
-            }}
-          >
-            📅 Calendar
-          </button>
-
-          <button 
-            onClick={() => { setDashboardTab('summary'); setPreviewDate(null); }}
-            style={{
-              flex: 1,
-              padding: '0.6rem 0.5rem',
-              borderRadius: '25px',
-              border: 'none',
-              background: dashboardTab === 'summary' ? 'linear-gradient(135deg, #10b981, #059669)' : 'transparent',
-              color: dashboardTab === 'summary' ? '#fff' : '#94a3b8',
-              fontWeight: '800',
-              fontSize: '0.78rem',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-              whiteSpace: 'nowrap',
-              boxShadow: dashboardTab === 'summary' ? '0 4px 12px rgba(16, 185, 129, 0.35)' : 'none'
-            }}
-          >
-            📊 Summary
-          </button>
-
-          <button 
-            onClick={() => { setDashboardTab('analytics'); setPreviewDate(null); }}
-            style={{
-              flex: 1,
-              padding: '0.6rem 0.5rem',
-              borderRadius: '25px',
-              border: 'none',
-              background: dashboardTab === 'analytics' ? 'linear-gradient(135deg, #3b82f6, #2563eb)' : 'transparent',
-              color: dashboardTab === 'analytics' ? '#fff' : '#94a3b8',
-              fontWeight: '800',
-              fontSize: '0.78rem',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-              whiteSpace: 'nowrap',
-              boxShadow: dashboardTab === 'analytics' ? '0 4px 12px rgba(59, 130, 246, 0.35)' : 'none'
-            }}
-          >
-            📈 Graphs
-          </button>
-
-          <button 
-            onClick={() => { setDashboardTab('reports'); setPreviewDate(null); }}
-            style={{
-              flex: 1,
-              padding: '0.6rem 0.5rem',
-              borderRadius: '25px',
-              border: 'none',
-              background: dashboardTab === 'reports' ? 'linear-gradient(135deg, #8b5cf6, #7c3aed)' : 'transparent',
-              color: dashboardTab === 'reports' ? '#fff' : '#94a3b8',
-              fontWeight: '800',
-              fontSize: '0.78rem',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-              whiteSpace: 'nowrap',
-              boxShadow: dashboardTab === 'reports' ? '0 4px 12px rgba(139, 92, 246, 0.35)' : 'none'
-            }}
-          >
-            📜 Reports
-          </button>
+          {[
+            { id: 'overview', label: 'Calendar', icon: <Calendar size={18} />, color: '#f59e0b', shadow: 'rgba(245, 158, 11, 0.4)' },
+            { id: 'summary', label: 'Summary', icon: <LayoutGrid size={18} />, color: '#10b981', shadow: 'rgba(16, 185, 129, 0.4)' },
+            { id: 'analytics', label: 'Graphs', icon: <BarChart2 size={18} />, color: '#3b82f6', shadow: 'rgba(59, 130, 246, 0.4)' },
+            { id: 'reports', label: 'Reports', icon: <FileText size={18} />, color: '#8b5cf6', shadow: 'rgba(139, 92, 246, 0.4)' }
+          ].map(tab => {
+            const isActive = dashboardTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => { setDashboardTab(tab.id); setPreviewDate(null); }}
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px',
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  transform: isActive ? 'translateY(-3px)' : 'translateY(0)'
+                }}
+              >
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '50%',
+                  background: isActive ? `linear-gradient(135deg, ${tab.color}, ${tab.color}dd)` : 'rgba(255, 255, 255, 0.05)',
+                  color: isActive ? '#fff' : '#94a3b8',
+                  boxShadow: isActive ? `0 8px 20px ${tab.shadow}` : 'none',
+                  border: isActive ? 'none' : '1px solid rgba(255, 255, 255, 0.1)',
+                  transition: 'all 0.3s'
+                }}>
+                  {tab.icon}
+                </div>
+                <span style={{ 
+                  fontSize: '0.7rem', 
+                  fontWeight: isActive ? '800' : '600', 
+                  color: isActive ? tab.color : '#94a3b8',
+                  transition: 'all 0.3s'
+                }}>
+                  {tab.label}
+                </span>
+              </button>
+            )
+          })}
         </div>,
         document.body
       )}

@@ -127,7 +127,7 @@ const BucketList = ({ currentUser }) => {
     const sorted = [...defaults, ...customs];
 
     return (
-      <div className="grid-cols-2">
+      <div className="grid-cols-2" style={{ gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)' }}>
         <div className="panel" style={{ background: 'rgba(15,23,42,0.6)' }}>
           <h3 className="panel-title" style={{ color: 'var(--text-main)', marginBottom: '1rem' }}>To-Do & In Progress</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
@@ -180,7 +180,7 @@ const BucketList = ({ currentUser }) => {
     'completed',
     (item) => (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', marginTop: '1rem' }}>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
           <button className={`badge ${item.status === 'todo' ? 'badge-amber' : 'badge-amber disabled'}`} onClick={() => updateStatus(item.id, 'todo')}>To-Do</button>
           <button className={`badge ${item.status === 'progress' ? 'badge-blue' : 'badge-blue disabled'}`} onClick={() => updateStatus(item.id, 'progress')}>In Progress</button>
           <button className="badge badge-emerald disabled" onClick={() => updateStatus(item.id, 'completed')}>Mark Complete</button>
@@ -216,7 +216,7 @@ const BucketList = ({ currentUser }) => {
     'completed',
     (item) => (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', marginTop: '1rem' }}>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
           <button className={`badge ${item.status === 'todo' ? 'badge-amber' : 'badge-amber disabled'}`} onClick={() => updateStatus(item.id, 'todo')}>To Learn</button>
           <button className={`badge ${item.status === 'progress' ? 'badge-blue' : 'badge-blue disabled'}`} onClick={() => updateStatus(item.id, 'progress')}>Studying</button>
           <button className="badge badge-emerald disabled" onClick={() => updateStatus(item.id, 'completed')}>Concept Clear</button>
@@ -257,7 +257,7 @@ const BucketList = ({ currentUser }) => {
           <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
             Started: {item.startDate} ({days > 0 ? `${days} days ago` : 'Today'})
           </div>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
             <button className={`badge ${item.status === 'reading' ? 'badge-amber' : 'badge-amber disabled'}`} onClick={() => updateStatus(item.id, 'reading')}>Reading</button>
             <button className="badge badge-emerald disabled" onClick={() => updateStatus(item.id, 'completed')}>Finished</button>
           </div>

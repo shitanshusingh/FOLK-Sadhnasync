@@ -202,51 +202,69 @@ const Wallet = ({ currentUser }) => {
         </div>
       </div>
 
-            {/* 📱 SINGLE-SCREEN TABBED WALLET NAVIGATION */}
+      {/* 📱 PREMIUM NON-SCROLLING ICON NAVIGATION */}
       <div style={{
         display: 'flex',
-        flexWrap: 'wrap',
-        gap: '0.4rem',
-        marginBottom: '1.2rem',
-        background: 'rgba(15, 23, 42, 0.85)',
-        padding: '0.4rem',
-        borderRadius: '16px',
-        border: '1px solid rgba(245, 158, 11, 0.3)'
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '1.5rem',
+        background: 'linear-gradient(180deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.85) 100%)',
+        backdropFilter: 'blur(20px)',
+        padding: '0.8rem 0.5rem',
+        borderRadius: '24px',
+        border: '1px solid rgba(255, 255, 255, 0.08)',
+        borderTop: '1px solid rgba(255, 255, 255, 0.15)',
+        boxShadow: '0 10px 30px rgba(0, 0, 0, 0.5), inset 0 2px 10px rgba(255,255,255,0.05)'
       }}>
         {[
-          { id: 'balances', label: 'Balances', icon: <WalletIcon size={16} />, gradient: 'linear-gradient(135deg, #f59e0b, #ea580c)' },
-          { id: 'exchange', label: 'Exchange', icon: <RefreshCw size={16} />, gradient: 'linear-gradient(135deg, #8b5cf6, #6d28d9)' },
-          { id: 'redeem', label: 'Redeem', icon: <Gift size={16} />, gradient: 'linear-gradient(135deg, #10b981, #059669)' },
-          { id: 'achievements', label: 'Badges', icon: <Award size={16} />, gradient: 'linear-gradient(135deg, #ec4899, #be185d)' },
-          { id: 'rules', label: 'Rules', icon: <Info size={16} />, gradient: 'linear-gradient(135deg, #3b82f6, #1d4ed8)' }
+          { id: 'balances', label: 'Wallet', icon: <WalletIcon size={20} />, color: '#f59e0b', shadow: 'rgba(245, 158, 11, 0.4)' },
+          { id: 'exchange', label: 'Swap', icon: <RefreshCw size={20} />, color: '#8b5cf6', shadow: 'rgba(139, 92, 246, 0.4)' },
+          { id: 'redeem', label: 'Redeem', icon: <Gift size={20} />, color: '#10b981', shadow: 'rgba(16, 185, 129, 0.4)' },
+          { id: 'achievements', label: 'Badges', icon: <Award size={20} />, color: '#ec4899', shadow: 'rgba(236, 72, 153, 0.4)' },
+          { id: 'rules', label: 'Rules', icon: <Info size={20} />, color: '#3b82f6', shadow: 'rgba(59, 130, 246, 0.4)' }
         ].map(tab => {
           const isActive = walletTab === tab.id;
-          const shadowColor = tab.gradient.match(/#[a-z0-9]+/i) ? tab.gradient.match(/#[a-z0-9]+/i)[0] : '#ffffff';
           return (
             <button
               key={tab.id}
               onClick={() => { triggerHaptic(); setWalletTab(tab.id); }}
               style={{
                 flex: 1,
-                minWidth: '100px',
                 display: 'flex',
-                justifyContent: 'center',
+                flexDirection: 'column',
                 alignItems: 'center',
-                gap: '6px',
-                padding: '0.65rem 0.3rem',
-                borderRadius: '12px',
+                justifyContent: 'center',
+                gap: '8px',
                 border: 'none',
-                background: isActive ? tab.gradient : 'transparent',
-                color: isActive ? '#fff' : '#94a3b8',
-                fontWeight: '800',
-                fontSize: '0.8rem',
+                background: 'transparent',
                 cursor: 'pointer',
-                boxShadow: isActive ? `0 4px 15px ${shadowColor}60` : 'none',
-                transition: 'all 0.2s',
-                opacity: isActive ? 1 : 0.75
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                transform: isActive ? 'translateY(-4px)' : 'translateY(0)'
               }}
             >
-              {tab.icon} {tab.label}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '42px',
+                height: '42px',
+                borderRadius: '50%',
+                background: isActive ? `linear-gradient(135deg, ${tab.color}, ${tab.color}dd)` : 'rgba(255, 255, 255, 0.05)',
+                color: isActive ? '#fff' : '#94a3b8',
+                boxShadow: isActive ? `0 8px 20px ${tab.shadow}` : 'none',
+                border: isActive ? 'none' : '1px solid rgba(255, 255, 255, 0.1)',
+                transition: 'all 0.3s'
+              }}>
+                {tab.icon}
+              </div>
+              <span style={{ 
+                fontSize: '0.75rem', 
+                fontWeight: isActive ? '800' : '600', 
+                color: isActive ? tab.color : '#94a3b8',
+                transition: 'all 0.3s'
+              }}>
+                {tab.label}
+              </span>
             </button>
           );
         })}

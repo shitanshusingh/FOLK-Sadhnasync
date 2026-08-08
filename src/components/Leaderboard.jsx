@@ -369,7 +369,7 @@ const Leaderboard = ({ currentUser }) => {
                   <Medal size={16} color="#475569" />
                 </div>
               </div>
-              <div style={{ background: 'linear-gradient(180deg, #e2e8f0 0%, #cbd5e1 100%)', width: '100%', height: '100px', borderTopLeftRadius: '12px', borderTopRightRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '25px', boxShadow: '0 -5px 15px rgba(0,0,0,0.1)' }}>
+              <div style={{ background: 'linear-gradient(180deg, #e2e8f0 0%, #cbd5e1 100%)', width: '100%', height: '120px', borderTopLeftRadius: '12px', borderTopRightRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '25px', boxShadow: '0 -5px 15px rgba(0,0,0,0.1)' }}>
                 <span style={{ fontWeight: 'bold', color: '#334155', fontSize: '1.2rem' }}>2</span>
                 <span style={{ fontSize: '0.8rem', color: '#475569', textAlign: 'center', padding: '0 5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>{top3[1].name.split(' ')[0]}</span>
                 {top3[1].userBadges && top3[1].userBadges.length > 0 && (
@@ -393,7 +393,7 @@ const Leaderboard = ({ currentUser }) => {
                 <Trophy size={20} color="#78350f" />
               </div>
             </div>
-            <div style={{ background: 'linear-gradient(180deg, #fde68a 0%, #fbbf24 100%)', width: '100%', height: '130px', borderTopLeftRadius: '12px', borderTopRightRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '30px', boxShadow: '0 -5px 20px rgba(251, 191, 36, 0.4)' }}>
+            <div style={{ background: 'linear-gradient(180deg, #fde68a 0%, #fbbf24 100%)', width: '100%', height: '150px', borderTopLeftRadius: '12px', borderTopRightRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '30px', boxShadow: '0 -5px 20px rgba(251, 191, 36, 0.4)' }}>
               <span style={{ fontWeight: 'bold', color: '#78350f', fontSize: '1.5rem' }}>1</span>
               <span style={{ fontSize: '0.9rem', color: '#92400e', textAlign: 'center', padding: '0 5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>{top3[0].name.split(' ')[0]}</span>
               {top3[0].userBadges && top3[0].userBadges.length > 0 && (
@@ -417,7 +417,7 @@ const Leaderboard = ({ currentUser }) => {
                   <Award size={16} color="#fff" />
                 </div>
               </div>
-              <div style={{ background: 'linear-gradient(180deg, #fcd34d 0%, #d97706 100%)', width: '100%', height: '80px', borderTopLeftRadius: '12px', borderTopRightRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '20px', boxShadow: '0 -5px 15px rgba(0,0,0,0.1)' }}>
+              <div style={{ background: 'linear-gradient(180deg, #fcd34d 0%, #d97706 100%)', width: '100%', height: '100px', borderTopLeftRadius: '12px', borderTopRightRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '20px', boxShadow: '0 -5px 15px rgba(0,0,0,0.1)' }}>
                 <span style={{ fontWeight: 'bold', color: '#78350f', fontSize: '1.2rem' }}>3</span>
                 <span style={{ fontSize: '0.8rem', color: '#78350f', textAlign: 'center', padding: '0 5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>{top3[2].name.split(' ')[0]}</span>
                 {top3[2].userBadges && top3[2].userBadges.length > 0 && (

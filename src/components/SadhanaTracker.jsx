@@ -211,7 +211,7 @@ const SadhanaTracker = ({ currentUser, prefilledDate }) => {
     setErrorMsg('');
     
     const h = JSON.parse(localStorage.getItem(`sadhana_history_${currentUser.email}`) || '[]');
-    const newEntry = { date, activityTimes, details, score, maxScore };
+    const newEntry = { date, activityTimes, details, score, maxScore, lastUpdated: new Date().toISOString() };
     
     const existingIndex = h.findIndex(entry => entry.date === date);
     if (existingIndex >= 0) {
@@ -453,7 +453,7 @@ const SadhanaTracker = ({ currentUser, prefilledDate }) => {
 
             {/* TAB 1: TIMINGS */}
             <div style={{ display: activeFormTab === 'timings' ? 'block' : 'none' }}>
-        <div className="panel" style={{ marginBottom: '1rem', padding: '1.25rem' }}>
+        <div className="panel" style={{ marginBottom: '0.5rem', padding: '1rem' }}>
           <div className="panel-header" style={{ borderBottom: 'none', marginBottom: 0, paddingBottom: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h3 style={{ margin: 0, fontSize: '1.05rem' }}>1. Core Timings</h3>
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
@@ -480,30 +480,30 @@ const SadhanaTracker = ({ currentUser, prefilledDate }) => {
               </div>
             </div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '1rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '0.5rem' }}>
             {activeCore.map(activity => {
               const currentPts = calculatePoints(activity.id, activityTimes[activity.id], config, details.inTemple);
               const targetTime = getTargetTime(activity.id, config[activity.id].time, details.inTemple);
               
               return (
-                <div key={activity.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <div key={activity.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                     <span style={{ fontSize: '0.95rem', fontWeight: '600', color: 'var(--text-main)' }}>{activity.label}</span>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Target: {targetTime}</span>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Target: {targetTime}</span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <input autoComplete="off" 
                       type="time" 
-                      style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '6px 8px', color: 'var(--primary-amber)', fontWeight: 'bold', outline: 'none', width: '105px' }}
+                      style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '6px 10px', color: 'var(--primary-amber)', fontWeight: 'bold', outline: 'none', width: '105px', fontSize: '0.9rem' }}
                       value={activityTimes[activity.id] || ''} 
                       onChange={(e) => setActivityTimes(prev => ({...prev, [activity.id]: e.target.value}))}
                     />
                     {activityTimes[activity.id] ? (
-                      <span className={`badge ${currentPts === 4 ? 'badge-emerald' : currentPts === 2 ? 'badge-amber' : 'badge-rose'}`} style={{ width: '50px', justifyContent: 'center' }}>
-                        {currentPts} pts
+                      <span className={`badge ${currentPts === 4 ? 'badge-emerald' : currentPts === 2 ? 'badge-amber' : 'badge-rose'}`} style={{ minWidth: '45px', justifyContent: 'center', padding: '4px 6px', fontSize: '0.8rem' }}>
+                        {currentPts} pt
                       </span>
                     ) : (
-                      <span style={{ width: '50px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>--</span>
+                      <span style={{ minWidth: '45px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>--</span>
                     )}
                   </div>
                 </div>
@@ -511,32 +511,32 @@ const SadhanaTracker = ({ currentUser, prefilledDate }) => {
             })}
           </div>
 
-          <h3 style={{ margin: '1.5rem 0 0.5rem', fontSize: '1.05rem' }}>Optional Activities</h3>
+          <h3 style={{ margin: '0.75rem 0 0.25rem', fontSize: '1.05rem' }}>Optional Activities</h3>
           {activeOptional.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
               {activeOptional.map(activity => {
                 const currentPts = calculatePoints(activity.id, activityTimes[activity.id], config, details.inTemple);
                 const targetTime = getTargetTime(activity.id, config[activity.id].time, details.inTemple);
               
                 return (
-                  <div key={activity.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <div key={activity.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                       <span style={{ fontSize: '0.95rem', fontWeight: '600', color: 'var(--text-main)' }}>{activity.label}</span>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Target: {targetTime}</span>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Target: {targetTime}</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <input autoComplete="off" 
                         type="time" 
-                        style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '6px 8px', color: 'var(--primary-amber)', fontWeight: 'bold', outline: 'none', width: '105px' }}
+                        style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '6px 10px', color: 'var(--primary-amber)', fontWeight: 'bold', outline: 'none', width: '105px', fontSize: '0.9rem' }}
                         value={activityTimes[activity.id] || ''} 
                         onChange={(e) => setActivityTimes(prev => ({...prev, [activity.id]: e.target.value}))}
                       />
                       {activityTimes[activity.id] ? (
-                        <span className={`badge ${currentPts === 4 ? 'badge-emerald' : currentPts === 2 ? 'badge-amber' : 'badge-rose'}`} style={{ width: '50px', justifyContent: 'center' }}>
-                          {currentPts} pts
+                        <span className={`badge ${currentPts === 4 ? 'badge-emerald' : currentPts === 2 ? 'badge-amber' : 'badge-rose'}`} style={{ minWidth: '45px', justifyContent: 'center', padding: '4px 6px', fontSize: '0.8rem' }}>
+                          {currentPts} pt
                         </span>
                       ) : (
-                        <span style={{ width: '50px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>--</span>
+                        <span style={{ minWidth: '45px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>--</span>
                       )}
                     </div>
                   </div>
@@ -545,43 +545,37 @@ const SadhanaTracker = ({ currentUser, prefilledDate }) => {
             </div>
           )}
 
-          {currentUser?.status === 'FOLK Resident' && activeCore.some(a => !activityTimes[a.id]) && (
-            <div style={{ marginTop: '1.5rem', background: 'rgba(15, 23, 42, 0.8)', padding: '1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-highlight)' }}>
-              <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--primary-amber)', display: 'block', marginBottom: '0.5rem' }}>
-                <AlertTriangle size={14} style={{ display: 'inline', marginRight: '4px' }}/> 
-                You left some core times blank (Absent). Please select the reason:
-              </label>
-              <select 
-                className="form-control" 
-                value={details.absentReason} 
-                onChange={(e) => setDetails({...details, absentReason: e.target.value})}
-                style={{ width: '100%', maxWidth: '300px', marginBottom: details.absentReason === 'Others (OT)' ? '0.75rem' : '0' }}
-              >
-                <option value="">-- Select Reason --</option>
-                {ABSENT_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
-              </select>
+          {activeCore.some(a => !activityTimes[a.id]) && (
+            <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '8px', padding: '8px 12px', background: 'rgba(245, 158, 11, 0.05)', borderRadius: '12px', border: '1px dashed rgba(245, 158, 11, 0.2)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <AlertTriangle size={14} color="var(--primary-amber)"/> Absent Reason
+                </span>
+                <select 
+                  value={details.absentReason} 
+                  onChange={(e) => setDetails({...details, absentReason: e.target.value})}
+                  style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '4px 8px', color: '#94a3b8', outline: 'none', fontSize: '0.8rem', maxWidth: '140px' }}
+                >
+                  <option value="">-- Select --</option>
+                  {ABSENT_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+              </div>
 
               {details.absentReason === 'Others (OT)' && (
-                <div style={{ marginTop: '0.75rem' }}>
-                  <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.3rem' }}>
-                    Enter Remark / Reason for Absence (compulsory):
-                  </label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="e.g. Exam preparation / Family emergency"
-                    value={details.absentRemark || ''}
-                    onChange={(e) => setDetails({...details, absentRemark: e.target.value})}
-                    style={{ width: '100%', maxWidth: '400px' }}
-                    required
-                  />
-                </div>
+                <input
+                  type="text"
+                  placeholder="Enter reason for absence..."
+                  value={details.absentRemark || ''}
+                  onChange={(e) => setDetails({...details, absentRemark: e.target.value})}
+                  style={{ width: '100%', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '6px 10px', color: '#94a3b8', fontSize: '0.8rem', outline: 'none' }}
+                  required
+                />
               )}
             </div>
           )}
         </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
-            <button type="button" onClick={() => { setActiveFormTab('details'); window.scrollTo({top: 0, behavior: 'smooth'}); }} className="nav-btn btn-primary" style={{ padding: '0.8rem 2rem', fontSize: '1rem', borderRadius: '12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.75rem' }}>
+            <button type="button" onClick={() => { setActiveFormTab('details'); window.scrollTo({top: 0, behavior: 'smooth'}); }} className="nav-btn btn-primary" style={{ padding: '0.6rem 2rem', fontSize: '1rem', borderRadius: '12px' }}>
               Next: Daily Details <Zap size={18} style={{ marginLeft: '8px' }} />
             </button>
           </div>
@@ -597,103 +591,55 @@ const SadhanaTracker = ({ currentUser, prefilledDate }) => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {currentUser?.status !== 'Beginner' && (
               <>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                    <span style={{ fontSize: '0.95rem', fontWeight: '600', color: 'var(--text-main)' }}>Previous Night Sleep</span>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--accent-rose)' }}>Required</span>
-                  </div>
-                  <input autoComplete="off" type="time" style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '6px 8px', color: '#38bdf8', fontWeight: 'bold', outline: 'none', width: '105px' }} value={details.sleepTime || ''} onChange={(e) => setDetails({...details, sleepTime: e.target.value})} required/>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <span style={{ fontSize: '0.95rem', fontWeight: '600', color: 'var(--text-main)' }}>Previous Night Sleep <span style={{color: 'var(--accent-rose)'}}>*</span></span>
+                  <input autoComplete="off" type="time" style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '8px 12px', color: 'var(--primary-amber)', fontWeight: 'bold', outline: 'none', width: '120px' }} value={details.sleepTime || ''} onChange={(e) => setDetails({...details, sleepTime: e.target.value})} required/>
                 </div>
                 
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                    <span style={{ fontSize: '0.95rem', fontWeight: '600', color: 'var(--text-main)' }}>Wake-up Time</span>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--accent-rose)' }}>Required</span>
-                  </div>
-                  <input autoComplete="off" type="time" style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '6px 8px', color: '#38bdf8', fontWeight: 'bold', outline: 'none', width: '105px' }} value={details.wakeupTime || ''} onChange={(e) => setDetails({...details, wakeupTime: e.target.value})} required/>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <span style={{ fontSize: '0.95rem', fontWeight: '600', color: 'var(--text-main)' }}>Wake-up Time <span style={{color: 'var(--accent-rose)'}}>*</span></span>
+                  <input autoComplete="off" type="time" style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '8px 12px', color: 'var(--primary-amber)', fontWeight: 'bold', outline: 'none', width: '120px' }} value={details.wakeupTime || ''} onChange={(e) => setDetails({...details, wakeupTime: e.target.value})} required/>
                 </div>
               </>
             )}
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '12px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  <span style={{ fontSize: '0.95rem', fontWeight: '600', color: 'var(--text-main)' }}>Total Rounds Chanted</span>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--accent-rose)' }}>Required</span>
-                </div>
-                <input autoComplete="off" type="number" min="0" placeholder="0" style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '6px 8px', color: '#38bdf8', fontWeight: 'bold', outline: 'none', width: '70px', textAlign: 'center' }} value={details.totalRounds || ''} onChange={(e) => setDetails({...details, totalRounds: e.target.value})} required />
-              </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                {[16, 8].map(val => (
-                  <button key={val} type="button" onClick={() => setDetails({...details, totalRounds: val.toString()})} style={{ flex: 1, padding: '0.5rem', borderRadius: '8px', background: details.totalRounds === val.toString() ? '#38bdf8' : 'rgba(56, 189, 248, 0.1)', color: details.totalRounds === val.toString() ? '#fff' : '#38bdf8', border: '1px solid rgba(56, 189, 248, 0.2)', fontSize: '0.85rem', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}>{val} Rounds</button>
-                ))}
-              </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <span style={{ fontSize: '0.95rem', fontWeight: '600', color: 'var(--text-main)' }}>Total Rounds Chanted <span style={{color: 'var(--accent-rose)'}}>*</span></span>
+              <input autoComplete="off" type="number" min="0" placeholder="0" style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '8px 12px', color: 'var(--primary-amber)', fontWeight: 'bold', outline: 'none', width: '120px', textAlign: 'center' }} value={details.totalRounds || ''} onChange={(e) => setDetails({...details, totalRounds: e.target.value})} required />
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                <span style={{ fontSize: '0.95rem', fontWeight: '600', color: 'var(--text-main)' }}>Chanting Completed</span>
-                <span style={{ fontSize: '0.75rem', color: currentUser?.status !== 'Beginner' ? 'var(--accent-rose)' : 'var(--text-muted)' }}>{currentUser?.status !== 'Beginner' ? 'Required' : 'Optional'}</span>
-              </div>
-              <input autoComplete="off" type="time" style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '6px 8px', color: '#38bdf8', fontWeight: 'bold', outline: 'none', width: '105px' }} value={details.chantingCompletionTime || ''} onChange={(e) => setDetails({...details, chantingCompletionTime: e.target.value})} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <span style={{ fontSize: '0.95rem', fontWeight: '600', color: 'var(--text-main)' }}>Chanting Completed {currentUser?.status !== 'Beginner' && <span style={{color: 'var(--accent-rose)'}}>*</span>}</span>
+              <input autoComplete="off" type="time" style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '8px 12px', color: 'var(--primary-amber)', fontWeight: 'bold', outline: 'none', width: '120px' }} value={details.chantingCompletionTime || ''} onChange={(e) => setDetails({...details, chantingCompletionTime: e.target.value})} />
             </div>
 
             {currentUser?.status === 'Non-FOLK Resident' && (
               <>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', padding: '12px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: '0.95rem', fontWeight: '600', color: 'var(--text-main)' }}>Book Reading</span>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--accent-rose)' }}>Required</span>
-                  </div>
-                  <input autoComplete="off" type="text" placeholder="Which Book are you reading?" style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '8px 12px', color: '#38bdf8', fontSize: '0.9rem', outline: 'none', width: '100%' }} value={details.bookName || ''} onChange={(e) => setDetails({...details, bookName: e.target.value})} required />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <span style={{ fontSize: '0.95rem', fontWeight: '600', color: 'var(--text-main)', whiteSpace: 'nowrap', marginRight: '10px' }}>Book Reading <span style={{color: 'var(--accent-rose)'}}>*</span></span>
+                  <input autoComplete="off" type="text" placeholder="Which Book?" style={{ flex: 1, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '8px 12px', color: 'var(--primary-amber)', fontSize: '0.9rem', outline: 'none', minWidth: '0' }} value={details.bookName || ''} onChange={(e) => setDetails({...details, bookName: e.target.value})} required />
                 </div>
                 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', padding: '12px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: '0.95rem', fontWeight: '600', color: 'var(--text-main)' }}>Seva Performed Today</span>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Optional</span>
-                  </div>
-                  <input autoComplete="off" type="text" placeholder="e.g. Book distribution" style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '8px 12px', color: '#38bdf8', fontSize: '0.9rem', outline: 'none', width: '100%' }} value={details.sevaName || ''} onChange={(e) => setDetails({...details, sevaName: e.target.value})} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <span style={{ fontSize: '0.95rem', fontWeight: '600', color: 'var(--text-main)', whiteSpace: 'nowrap', marginRight: '10px' }}>Seva Performed</span>
+                  <input autoComplete="off" type="text" placeholder="e.g. Cooking" style={{ flex: 1, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '8px 12px', color: 'var(--primary-amber)', fontSize: '0.9rem', outline: 'none', minWidth: '0' }} value={details.sevaName || ''} onChange={(e) => setDetails({...details, sevaName: e.target.value})} />
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                    <span style={{ fontSize: '0.95rem', fontWeight: '600', color: 'var(--text-main)' }}>Seva Duration</span>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Optional (Mins)</span>
-                  </div>
-                  <input autoComplete="off" type="number" min="0" placeholder="0" style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '6px 8px', color: '#38bdf8', fontWeight: 'bold', outline: 'none', width: '70px', textAlign: 'center' }} value={details.sevaDurationMins || ''} onChange={(e) => setDetails({...details, sevaDurationMins: e.target.value})} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <span style={{ fontSize: '0.95rem', fontWeight: '600', color: 'var(--text-main)' }}>Seva Duration (Mins)</span>
+                  <input autoComplete="off" type="number" min="0" placeholder="0" style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '8px 12px', color: 'var(--primary-amber)', fontWeight: 'bold', outline: 'none', width: '120px', textAlign: 'center' }} value={details.sevaDurationMins || ''} onChange={(e) => setDetails({...details, sevaDurationMins: e.target.value})} />
                 </div>
               </>
             )}
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '12px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  <span style={{ fontSize: '0.95rem', fontWeight: '600', color: 'var(--text-main)' }}>Reading Duration</span>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--accent-rose)' }}>Required (Mins)</span>
-                </div>
-                <input autoComplete="off" type="number" min="0" placeholder="0" style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '6px 8px', color: '#38bdf8', fontWeight: 'bold', outline: 'none', width: '70px', textAlign: 'center' }} value={details.readingDuration || ''} onChange={(e) => setDetails({...details, readingDuration: e.target.value})} required />
-              </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                {[60, 45, 30].map(val => (
-                  <button key={val} type="button" onClick={() => setDetails({...details, readingDuration: val.toString()})} style={{ flex: 1, padding: '0.4rem', borderRadius: '8px', background: details.readingDuration === val.toString() ? '#38bdf8' : 'rgba(56, 189, 248, 0.1)', color: details.readingDuration === val.toString() ? '#fff' : '#38bdf8', border: '1px solid rgba(56, 189, 248, 0.2)', fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}>{val}m</button>
-                ))}
-              </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <span style={{ fontSize: '0.95rem', fontWeight: '600', color: 'var(--text-main)' }}>Reading (Mins) <span style={{color: 'var(--accent-rose)'}}>*</span></span>
+              <input autoComplete="off" type="number" min="0" placeholder="0" style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '8px 12px', color: 'var(--primary-amber)', fontWeight: 'bold', outline: 'none', width: '120px', textAlign: 'center' }} value={details.readingDuration || ''} onChange={(e) => setDetails({...details, readingDuration: e.target.value})} required />
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '12px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  <span style={{ fontSize: '0.95rem', fontWeight: '600', color: 'var(--text-main)' }}>Total Hearing</span>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--accent-rose)' }}>Required (Mins)</span>
-                </div>
-                <input autoComplete="off" type="number" min="0" placeholder="0" style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '6px 8px', color: '#38bdf8', fontWeight: 'bold', outline: 'none', width: '70px', textAlign: 'center' }} value={details.hearingDuration || ''} onChange={(e) => setDetails({...details, hearingDuration: e.target.value})} required />
-              </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                {[60, 45, 30].map(val => (
-                  <button key={val} type="button" onClick={() => setDetails({...details, hearingDuration: val.toString()})} style={{ flex: 1, padding: '0.4rem', borderRadius: '8px', background: details.hearingDuration === val.toString() ? '#38bdf8' : 'rgba(56, 189, 248, 0.1)', color: details.hearingDuration === val.toString() ? '#fff' : '#38bdf8', border: '1px solid rgba(56, 189, 248, 0.2)', fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}>{val}m</button>
-                ))}
-              </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <span style={{ fontSize: '0.95rem', fontWeight: '600', color: 'var(--text-main)' }}>Hearing (Mins) <span style={{color: 'var(--accent-rose)'}}>*</span></span>
+              <input autoComplete="off" type="number" min="0" placeholder="0" style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '8px 12px', color: 'var(--primary-amber)', fontWeight: 'bold', outline: 'none', width: '120px', textAlign: 'center' }} value={details.hearingDuration || ''} onChange={(e) => setDetails({...details, hearingDuration: e.target.value})} required />
             </div>
           </div>
         </div>

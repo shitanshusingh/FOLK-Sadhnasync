@@ -1,7 +1,7 @@
 import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import { format, parseISO } from 'date-fns';
-import { calculatePoints, getAbsentCode } from './scoring';
+import { calculatePoints, getAbsentCode } from './scoring.js';
 
 export const generateSadhanaPDFReport = ({
   devotee,
@@ -122,9 +122,11 @@ export const generateSadhanaPDFReport = ({
   const readingHrs = Math.floor(totalReadingMins / 60);
   const readingMinsRem = totalReadingMins % 60;
   const readingTimeStr = `${readingHrs}h:${readingMinsRem}m:0s`;
+  
+  const totalRoundsChanted = history.reduce((sum, h) => sum + Number(h.details?.totalRounds || 0), 0);
 
   // Draw Summary Table Box
-  doc.autoTable({
+  autoTable(doc, {
     startY: 88,
     head: [['ACTIVITY SUMMARY', 'OVERALL PERFORMANCE BREAKDOWN']],
     body: [
@@ -133,6 +135,7 @@ export const generateSadhanaPDFReport = ({
       ['READ (Book Reading)', readSummary],
       ['SB (Bhagavatam Class)', sbSummary],
       ['Total Sadhana %', `${totalSadhanaPct}%`],
+      ['Total Japa Rounds', `${totalRoundsChanted} rounds`],
       ['Reading Hours', readingTimeStr]
     ],
     theme: 'grid',
@@ -178,7 +181,7 @@ export const generateSadhanaPDFReport = ({
 
   const nextTableStartY = (doc.lastAutoTable?.finalY ?? 88) + 6;
 
-  doc.autoTable({
+  autoTable(doc, {
     startY: nextTableStartY,
     head: [['DATE', 'MA', 'JP', 'JP END', 'READ (PTS)', 'READ (M)', 'SB', 'YOGA', 'SLEEP', 'WAKE', 'PTS']],
     body: tableRows.length > 0 ? tableRows : [['No data', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-']],

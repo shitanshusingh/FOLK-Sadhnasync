@@ -1,4 +1,3 @@
-import WalletComponent from './Wallet';
 import React, { useState, useEffect } from 'react';
 import {
   Users, Building2, Flag, Send, CheckSquare, BarChart2,
@@ -208,13 +207,18 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
 
   // One-click PDF download
   const downloadDevoteePDF = (devotee) => {
-    const hist = JSON.parse(localStorage.getItem(`sadhana_history_${devotee.email}`) || '[]');
-    generateSadhanaPDFReport({
-      devotee,
-      history: hist,
-      guideName: currentUser.name
-    });
-    showStatus(`PDF Downloaded for ${devotee.name}!`);
+    try {
+      const hist = JSON.parse(localStorage.getItem(`sadhana_history_${devotee.email}`) || '[]');
+      generateSadhanaPDFReport({
+        devotee,
+        history: hist,
+        guideName: currentUser.name
+      });
+      showStatus(`PDF Downloaded for ${devotee.name}!`);
+    } catch (err) {
+      alert("Failed to generate PDF: " + err.message);
+      console.error(err);
+    }
   };
 
   // Target Broadcast Handler
@@ -234,7 +238,7 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
     recipients.forEach(r => {
       broadcasts.push({
         id: `msg_${Date.now()}_${Math.random()}`,
-        message: `ðŸ“¢ Guide ${currentUser.name}: ${messageText}`,
+        message: `📢 Guide ${currentUser.name}: ${messageText}`,
         date: new Date().toISOString(),
         sender: currentUser.name,
         targetEmail: r.email
@@ -304,7 +308,7 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
     globalCamps.push(campObj);
     localStorage.setItem('sadhana_campaigns', JSON.stringify(globalCamps));
 
-    // â˜ï¸ Sync campaign to Cloud DB
+    // 🕉️ Sync campaign to Cloud DB
     cloudSaveCampaign(campObj);
 
     // Broadcast Notifications to all targeted devotees
@@ -318,7 +322,7 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
       // 1. Initial Campaign Launch Notification
       broadcasts.push({
         id: `camp_notif_launch_${Date.now()}_${Math.random()}`,
-        message: `ðŸ† NEW CAMPAIGN: "${newCampaign.title}" (${newCampaign.festival || 'Festival'}) starting ${newCampaign.startDate || 'soon'}! Open your dashboard to ACCEPT and join the Campaign Leaderboard!`,
+        message: `🏆 NEW CAMPAIGN: "${newCampaign.title}" (${newCampaign.festival || 'Festival'}) starting ${newCampaign.startDate || 'soon'}! Open your dashboard to ACCEPT and join the Campaign Leaderboard!`,
         date: new Date().toISOString(),
         sender: currentUser.name,
         targetEmail: dev.email,
@@ -327,7 +331,7 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
       // 2. 1-Day Reminder Notification
       broadcasts.push({
         id: `camp_notif_rem_${Date.now()}_${Math.random()}`,
-        message: `â° REMINDER: Campaign "${newCampaign.title}" is launching! Accept your Guide's invitation now to participate and win prizes!`,
+        message: `⏳ REMINDER: Campaign "${newCampaign.title}" is launching! Accept your Guide's invitation now to participate and win prizes!`,
         date: new Date().toISOString(),
         sender: currentUser.name,
         targetEmail: dev.email,
@@ -433,6 +437,82 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-main)', color: '#f8fafc', fontFamily: "'Outfit', 'Inter', sans-serif" }}>
+
+      {/* 👑 FIXED POSITION FLOATING DASHBOARD KEY SWITCHER FOR FOLK PAGE */}
+      {selectedDevotee && typeof document !== 'undefined' && createPortal(
+        <div style={{
+          position: 'fixed',
+          bottom: '20px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 9995,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          width: 'calc(100% - 2rem)',
+          maxWidth: '440px',
+          background: 'linear-gradient(180deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.85) 100%)',
+          backdropFilter: 'blur(20px)',
+          padding: '0.5rem 0.4rem',
+          borderRadius: '20px',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          borderTop: '1px solid rgba(255, 255, 255, 0.15)',
+          boxShadow: '0 10px 30px rgba(0, 0, 0, 0.5), inset 0 2px 10px rgba(255,255,255,0.05)'
+        }}>
+          {[
+            { id: 'dashboard', label: 'Overview', icon: <User size={18} />, color: '#f59e0b', shadow: 'rgba(245, 158, 11, 0.4)' },
+            { id: 'tracker', label: 'Sādhana', icon: <BookOpen size={18} />, color: '#10b981', shadow: 'rgba(16, 185, 129, 0.4)' },
+            { id: 'leaderboard', label: 'Rankings', icon: <Trophy size={18} />, color: '#3b82f6', shadow: 'rgba(59, 130, 246, 0.4)' },
+            { id: 'bucket', label: 'Tasks', icon: <Target size={18} />, color: '#8b5cf6', shadow: 'rgba(139, 92, 246, 0.4)' }
+          ].map(tab => {
+            const isActive = devoteeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setDevoteeTab(tab.id)}
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px',
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  transform: isActive ? 'translateY(-3px)' : 'translateY(0)'
+                }}
+              >
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '50%',
+                  background: isActive ? `linear-gradient(135deg, ${tab.color}, ${tab.color}dd)` : 'rgba(255, 255, 255, 0.05)',
+                  color: isActive ? '#fff' : '#94a3b8',
+                  boxShadow: isActive ? `0 8px 20px ${tab.shadow}` : 'none',
+                  border: isActive ? 'none' : '1px solid rgba(255, 255, 255, 0.1)',
+                  transition: 'all 0.3s'
+                }}>
+                  {tab.icon}
+                </div>
+                <span style={{ 
+                  fontSize: '0.7rem', 
+                  fontWeight: isActive ? '800' : '600', 
+                  color: isActive ? tab.color : '#94a3b8',
+                  transition: 'all 0.3s'
+                }}>
+                  {tab.label}
+                </span>
+              </button>
+            )
+          })}
+        </div>,
+        document.body
+      )}
 
       {/* Toast Notification */}
       {statusMsg && (

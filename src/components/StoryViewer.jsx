@@ -74,6 +74,23 @@ const StoryViewer = ({ feedUser, onClose, currentUser }) => {
     cloudSaveReaction(reactionKey, updated);
     setShowReactions(true);
     setTimeout(() => setShowReactions(false), 2000);
+
+    if (currentUser.email !== feedUser.user.email) {
+      const notifs = JSON.parse(localStorage.getItem('sadhana_notifications_array') || '[]');
+      const senderName = currentUser.name.split(' ')[0];
+      // Prevent spamming multiple notifications from the same person
+      if (!notifs.find(n => n.type === 'reaction' && n.targetEmail === feedUser.user.email && n.message.includes(senderName))) {
+        notifs.push({
+          id: Date.now().toString(),
+          type: 'reaction',
+          targetEmail: feedUser.user.email,
+          title: 'New Story Reaction 🔥',
+          message: `${senderName} reacted to your Sādhana story with ${emoji}`,
+          seen: false
+        });
+        localStorage.setItem('sadhana_notifications_array', JSON.stringify(notifs));
+      }
+    }
   };
 
   if (!currentEntry) return null;
@@ -161,8 +178,8 @@ const StoryViewer = ({ feedUser, onClose, currentUser }) => {
             </div>
 
             <div style={{ background: 'rgba(255,255,255,0.05)', padding: '0.6rem', borderRadius: '12px' }}>
-              <span style={{ color: '#94a3b8', display: 'block', fontSize: '0.72rem' }}>Location</span>
-              <strong style={{ color: details.inTemple ? '#fbbf24' : '#94a3b8', fontSize: '0.95rem' }}>{details.inTemple ? '🏛️ Temple' : '🏡 Home'}</strong>
+              <span style={{ color: '#94a3b8', display: 'block', fontSize: '0.72rem' }}>Sleep Time</span>
+              <strong style={{ color: '#c4b5fd', fontSize: '0.95rem' }}>{details.sleepTime || '--'}</strong>
             </div>
 
           </div>
