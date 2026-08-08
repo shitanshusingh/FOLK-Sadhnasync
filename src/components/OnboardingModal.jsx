@@ -69,7 +69,7 @@ const TOUR_STEPS = [
   {
     id: 'community',
     title: 'Community Stories & Rankings 📊',
-    subtitle: 'Inspire fellow devotees & earn Prestige Titles.',
+    subtitle: 'Inspire fellow FOLK Boys & earn Prestige Titles.',
     icon: <Trophy size={48} color="#a855f7" />,
     content: (
       <div style={{ textAlign: 'center', lineHeight: '1.6' }}>

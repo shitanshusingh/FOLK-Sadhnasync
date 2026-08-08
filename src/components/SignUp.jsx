@@ -145,7 +145,7 @@ const SignUp = ({ onAuthSuccess }) => {
       if (data.guide) {
         cloudSaveNotification({
           id: `signup_${data.userId}_${Date.now()}`,
-          title: `👤 New Devotee: ${data.name}`,
+          title: `👤 New FOLK Boy: ${data.name}`,
           message: `${data.name} has registered under your guidance as a ${data.status}.`,
           type: 'info',
           target: data.guide,

@@ -306,7 +306,7 @@ const Leaderboard = ({ currentUser }) => {
               </span>
               <h2 style={{ margin: '0.2rem 0', fontSize: '1.5rem', fontWeight: '800', color: '#fff' }}>{activeCampaign.title}</h2>
               <p style={{ margin: 0, opacity: 0.9, fontSize: '0.82rem', color: '#cbd5e1' }}>
-                Guide: {activeCampaign.guide || currentUser.guide} · Target: {activeCampaign.target || 'All My Devotees'}
+                Guide: {activeCampaign.guide || currentUser.guide} · Target: {activeCampaign.target || 'All My FOLK Boys'}
               </p>
               <button 
                 onClick={handleOptOutCampaign}
@@ -499,7 +499,7 @@ const Leaderboard = ({ currentUser }) => {
         </div>
       )}
 
-      {/* Devotee Analytics Modal Overlay */}
+      {/* FOLK Boy Analytics Modal Overlay */}
       {selectedDevotee && createPortal(
         <div style={{ position: 'fixed', inset: 0, zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(5px)' }} onClick={() => setSelectedDevotee(null)}>
           <div className="animate-fade-in" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '20px', width: '100%', maxWidth: '350px', padding: '1.5rem', position: 'relative' }} onClick={e => e.stopPropagation()}>

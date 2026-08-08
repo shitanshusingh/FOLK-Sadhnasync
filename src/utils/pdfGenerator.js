@@ -3,14 +3,13 @@ import autoTable from 'jspdf-autotable';
 import { format, parseISO } from 'date-fns';
 import { calculatePoints, getAbsentCode } from './scoring.js';
 
-export const generateSadhanaPDFReport = ({
+export const addDevoteeReportToPDF = (doc, {
   devotee,
   history = [],
   guideName = '',
   startDateStr = '',
   endDateStr = ''
 }) => {
-  const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
 
   // 1. Top Header Branding Banner
@@ -55,9 +54,9 @@ export const generateSadhanaPDFReport = ({
   doc.setFont('helvetica', 'bold');
 
   // Left Column Metadata
-  doc.text(`Devotee Name:`, 20, 56);
+  doc.text(`FOLK Boy Name:`, 20, 56);
   doc.setFont('helvetica', 'normal');
-  doc.text(`${devotee.name || 'Devotee'}`, 48, 56);
+  doc.text(`${devotee.name || 'FOLK Boy'}`, 48, 56);
 
   doc.setFont('helvetica', 'bold');
   doc.text(`Email / User ID:`, 20, 63);
@@ -135,7 +134,6 @@ export const generateSadhanaPDFReport = ({
       ['READ (Book Reading)', readSummary],
       ['SB (Bhagavatam Class)', sbSummary],
       ['Total Sadhana %', `${totalSadhanaPct}%`],
-      ['Total Japa Rounds', `${totalRoundsChanted} rounds`],
       ['Reading Hours', readingTimeStr]
     ],
     theme: 'grid',
@@ -150,7 +148,7 @@ export const generateSadhanaPDFReport = ({
   });
 
   // 4. Daily Sadhana Log Table — Exactly matching Screenshot Columns!
-  // Columns: DATE | MA | JP | JP END | READ (PTS) | READ (M) | SB | YOGA | SLEEP | WAKE | PTS
+  // Columns: DATE | MA | JP (PTS) | JP (RNDS) | JP END | READ (PTS) | READ (M) | SB | YOGA | SLEEP | WAKE | PTS
   const tableRows = history.slice(0, 31).map(h => {
     const dStr = h.date ? format(parseISO(h.date), 'dd MMM') : '-';
     
@@ -170,21 +168,22 @@ export const generateSadhanaPDFReport = ({
     const sbVal = getVal('class');
     const yogaVal = getVal('yoga');
 
+    const jpRounds = h.details?.totalRounds || 0;
     const jpEnd = h.details?.chantingCompletionTime || '-';
     const readMins = h.details?.readingDuration || 0;
     const sleepTime = h.details?.sleepTime || '-';
     const wakeTime = h.details?.wakeupTime || '-';
     const pts = h.score !== undefined ? h.score : 0;
 
-    return [dStr, maVal, jpVal, jpEnd, readPtsVal, readMins, sbVal, yogaVal, sleepTime, wakeTime, pts];
+    return [dStr, maVal, jpVal, jpRounds, jpEnd, readPtsVal, readMins, sbVal, yogaVal, sleepTime, wakeTime, pts];
   });
 
   const nextTableStartY = (doc.lastAutoTable?.finalY ?? 88) + 6;
 
   autoTable(doc, {
     startY: nextTableStartY,
-    head: [['DATE', 'MA', 'JP', 'JP END', 'READ (PTS)', 'READ (M)', 'SB', 'YOGA', 'SLEEP', 'WAKE', 'PTS']],
-    body: tableRows.length > 0 ? tableRows : [['No data', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-']],
+    head: [['DATE', 'MA', 'JP (PTS)', 'JP (RNDS)', 'JP END', 'READ (PTS)', 'READ (M)', 'SB', 'YOGA', 'SLEEP', 'WAKE', 'PTS']],
+    body: tableRows.length > 0 ? tableRows : [['No data', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-']],
     theme: 'grid',
     headStyles: { fillColor: [15, 23, 42], textColor: [245, 158, 11], fontStyle: 'bold', fontSize: 8, halign: 'center' },
     bodyStyles: { fontSize: 8, textColor: [30, 41, 59], halign: 'center' },
@@ -210,6 +209,20 @@ export const generateSadhanaPDFReport = ({
   doc.setTextColor(100, 116, 139);
   doc.text('© 2026 All rights reserved | ISKCON Bhadaj, Ahmedabad | Managed by FOLK', 36, footerY + 6);
   doc.text('Official Sadhana Performance Document • Downloaded via FOLK SadhanaSync', 36, footerY + 11);
+};
 
-  doc.save(`${(devotee.name || 'Devotee').replace(/\s+/g, '_')}_Sadhana_Report.pdf`);
+export const generateSadhanaPDFReport = (config) => {
+  const doc = new jsPDF();
+  addDevoteeReportToPDF(doc, config);
+  doc.save(`${(config.devotee?.name || 'FOLK Boy').replace(/\s+/g, '_')}_Sadhana_Report.pdf`);
+};
+
+export const generateBatchPDFReport = (devoteesData, filename = 'FOLK_Batch_Report.pdf') => {
+  if (!devoteesData || devoteesData.length === 0) return;
+  const doc = new jsPDF();
+  devoteesData.forEach((config, index) => {
+    if (index > 0) doc.addPage();
+    addDevoteeReportToPDF(doc, config);
+  });
+  doc.save(filename);
 };

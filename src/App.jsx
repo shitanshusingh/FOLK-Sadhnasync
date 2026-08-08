@@ -18,6 +18,7 @@ import { calculatePoints } from './utils/scoring';
 import {
   cloudFetchAllUsers, cloudSaveUser, cloudFetchCampaigns, subscribeToCloudUpdates, cloudFetchNotifications, cloudFetchResidencies, cloudSaveResidency, cloudFetchAllSadhanaHistories, safeSetItem, cloudFetchAllBucketLists, cloudSaveRedemption, cloudFetchAllRedemptions, isCloudActive
 } from './services/firebase';
+import { triggerHaptic } from './utils/haptics';
 
 function App() {
   const [currentUser, setCurrentUser] = useState(() => JSON.parse(localStorage.getItem('sadhana_current_user') || 'null'));
@@ -232,6 +233,18 @@ function App() {
     const intervalId = setInterval(checkAndNotify, 600000);
     return () => clearInterval(intervalId);
   }, [currentUser]);
+
+  // 📳 Global Haptics Engine
+  useEffect(() => {
+    const handleGlobalClick = (e) => {
+      const target = e.target.closest('button, a, input[type="submit"], input[type="radio"], input[type="checkbox"], .nav-btn, .clickable');
+      if (target) {
+        triggerHaptic('light');
+      }
+    };
+    document.body.addEventListener('click', handleGlobalClick);
+    return () => document.body.removeEventListener('click', handleGlobalClick);
+  }, []);
 
   const handleLogin = (user) => {
     setCurrentUser(user);

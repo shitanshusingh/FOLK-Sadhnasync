@@ -58,7 +58,7 @@ const Profile = ({ user, onClose, onLogout, onUpdateUser, defaultIsEditing = fal
         
         <div style={{ overflowY: 'auto', padding: '2rem', flex: 1 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-            <h3 style={{ margin: 0, color: 'var(--primary-amber)', fontSize: '1.4rem' }}>{isEditing ? 'Edit Profile' : 'Devotee Profile'}</h3>
+            <h3 style={{ margin: 0, color: 'var(--primary-amber)', fontSize: '1.4rem' }}>{isEditing ? 'Edit Profile' : 'FOLK Boy Profile'}</h3>
             <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={24} /></button>
           </div>
 

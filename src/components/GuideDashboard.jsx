@@ -1,23 +1,25 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Users, Building2, Flag, Send, CheckSquare, BarChart2,
   LogOut, Download, TrendingUp, Award, BookOpen, Target,
   MessageSquare, Bell, Home, Star, ArrowLeft, X, Save,
   Calendar, Activity, List, Plus, Trash2, CheckCircle, Clock,
-  Filter, Gift, AlertCircle, ShieldAlert, Trophy
+  Filter, Gift, AlertCircle, ShieldAlert, Trophy, User
 } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
   RadarChart, Radar, PolarGrid, PolarAngleAxis,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
-import { format, subDays } from 'date-fns';
+import { format, subDays, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import folkLogo from '../assets/folk_logo.png';
 import iskconLogo from '../assets/iskcon_logo.png';
-import { generateSadhanaPDFReport } from '../utils/pdfGenerator';
+import { generateSadhanaPDFReport, generateBatchPDFReport } from '../utils/pdfGenerator';
 import { cloudSaveResidency, cloudSaveCampaign, cloudSaveUser, cloudFetchAllUsers } from '../services/firebase';
+import CustomSelect from './CustomSelect';
 
 // Import all Devotee App Components so Guide can view the full App Experience for any boy!
 import Dashboard from './Dashboard';
@@ -104,6 +106,16 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [clearedNotifs, setClearedNotifs] = useState(() => JSON.parse(localStorage.getItem(`sadhana_cleared_notifs_${currentUser.email}`) || '[]'));
+
+  // Batch Export State
+  const [showBatchExportModal, setShowBatchExportModal] = useState(false);
+  const [batchExportConfig, setBatchExportConfig] = useState({
+    dateRange: 'month',
+    customStart: '',
+    customEnd: '',
+    audience: 'all',
+    specificEmail: ''
+  });
 
   useEffect(() => {
     refreshData();
@@ -206,6 +218,79 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
   };
 
   // One-click PDF download
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleBatchExport = async () => {
+    try {
+      setIsExporting(true);
+      const today = new Date();
+      let startStr = '', endStr = '';
+      if (batchExportConfig.dateRange === 'month') {
+        startStr = format(startOfMonth(today), 'dd MMM yyyy');
+        endStr = format(endOfMonth(today), 'dd MMM yyyy');
+      } else if (batchExportConfig.dateRange === 'today') {
+        startStr = endStr = format(today, 'dd MMM yyyy');
+      } else if (batchExportConfig.dateRange === 'last_month') {
+        const lm = subMonths(today, 1);
+        startStr = format(startOfMonth(lm), 'dd MMM yyyy');
+        endStr = format(endOfMonth(lm), 'dd MMM yyyy');
+      } else if (batchExportConfig.dateRange === 'quarter') {
+        const lq = subMonths(today, 3);
+        startStr = format(startOfMonth(lq), 'dd MMM yyyy');
+        endStr = format(endOfMonth(today), 'dd MMM yyyy');
+      } else if (batchExportConfig.dateRange === 'custom') {
+        if (!batchExportConfig.customStart || !batchExportConfig.customEnd) {
+          alert("Please select both start and end dates.");
+          setIsExporting(false);
+          return;
+        }
+        startStr = format(new Date(batchExportConfig.customStart), 'dd MMM yyyy');
+        endStr = format(new Date(batchExportConfig.customEnd), 'dd MMM yyyy');
+      }
+
+      let targets = [...myDevotees];
+      if (batchExportConfig.audience === 'residents') targets = targets.filter(d => d.residency);
+      if (batchExportConfig.audience === 'non-residents') targets = targets.filter(d => !d.residency);
+      if (batchExportConfig.audience === 'beginners') targets = targets.filter(d => d.status?.toLowerCase().includes('beginner'));
+      if (batchExportConfig.audience.startsWith('residency_')) {
+        const rName = batchExportConfig.audience.replace('residency_', '');
+        targets = targets.filter(d => d.residency === rName);
+      }
+      if (batchExportConfig.audience === 'specific' && batchExportConfig.specificEmail) {
+        targets = targets.filter(d => d.email === batchExportConfig.specificEmail);
+      }
+
+      if (targets.length === 0) {
+        alert("No FOLK Boys found matching this criteria.");
+        setIsExporting(false);
+        return;
+      }
+
+      const reportConfigs = targets.map(d => {
+        const hist = JSON.parse(localStorage.getItem(`sadhana_history_${d.email}`) || '[]');
+        return {
+          devotee: d,
+          history: hist,
+          guideName: currentUser.name,
+          startDateStr: startStr,
+          endDateStr: endStr
+        };
+      });
+
+      // Small timeout to allow UI to render spinner before main thread blocks
+      setTimeout(() => {
+        generateBatchPDFReport(reportConfigs, `FOLK_Batch_Report_${format(today, 'MMM_yyyy')}.pdf`);
+        setShowBatchExportModal(false);
+        setIsExporting(false);
+        showStatus(`Generated master report for ${targets.length} FOLK Boys!`);
+      }, 100);
+      
+    } catch (e) {
+      alert("Error generating batch report: " + e.message);
+      setIsExporting(false);
+    }
+  };
+
   const downloadDevoteePDF = (devotee) => {
     try {
       const hist = JSON.parse(localStorage.getItem(`sadhana_history_${devotee.email}`) || '[]');
@@ -438,81 +523,91 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-main)', color: '#f8fafc', fontFamily: "'Outfit', 'Inter', sans-serif" }}>
 
-      {/* 👑 FIXED POSITION FLOATING DASHBOARD KEY SWITCHER FOR FOLK PAGE */}
-      {selectedDevotee && typeof document !== 'undefined' && createPortal(
-        <div style={{
-          position: 'fixed',
-          bottom: '20px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          zIndex: 9995,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          width: 'calc(100% - 2rem)',
-          maxWidth: '440px',
-          background: 'linear-gradient(180deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.85) 100%)',
-          backdropFilter: 'blur(20px)',
-          padding: '0.5rem 0.4rem',
-          borderRadius: '20px',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          borderTop: '1px solid rgba(255, 255, 255, 0.15)',
-          boxShadow: '0 10px 30px rgba(0, 0, 0, 0.5), inset 0 2px 10px rgba(255,255,255,0.05)'
-        }}>
-          {[
-            { id: 'dashboard', label: 'Overview', icon: <User size={18} />, color: '#f59e0b', shadow: 'rgba(245, 158, 11, 0.4)' },
-            { id: 'tracker', label: 'Sādhana', icon: <BookOpen size={18} />, color: '#10b981', shadow: 'rgba(16, 185, 129, 0.4)' },
-            { id: 'leaderboard', label: 'Rankings', icon: <Trophy size={18} />, color: '#3b82f6', shadow: 'rgba(59, 130, 246, 0.4)' },
-            { id: 'bucket', label: 'Tasks', icon: <Target size={18} />, color: '#8b5cf6', shadow: 'rgba(139, 92, 246, 0.4)' }
-          ].map(tab => {
-            const isActive = devoteeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setDevoteeTab(tab.id)}
-                style={{
-                  flex: 1,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '4px',
-                  border: 'none',
-                  background: 'transparent',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  transform: isActive ? 'translateY(-3px)' : 'translateY(0)'
-                }}
-              >
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '50%',
-                  background: isActive ? `linear-gradient(135deg, ${tab.color}, ${tab.color}dd)` : 'rgba(255, 255, 255, 0.05)',
-                  color: isActive ? '#fff' : '#94a3b8',
-                  boxShadow: isActive ? `0 8px 20px ${tab.shadow}` : 'none',
-                  border: isActive ? 'none' : '1px solid rgba(255, 255, 255, 0.1)',
-                  transition: 'all 0.3s'
-                }}>
-                  {tab.icon}
+
+      {/* Advanced Batch Export Modal */}
+      {showBatchExportModal && typeof document !== 'undefined' && createPortal(
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 10000, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div className="animate-fade-in" style={{ background: 'var(--bg-card)', padding: '2rem', borderRadius: '20px', width: '100%', maxWidth: '500px', border: '1px solid var(--border-highlight)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.4rem' }}>Advanced Batch Export</h2>
+              <button onClick={() => setShowBatchExportModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={24} /></button>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              {/* Date Range Selection */}
+              <div>
+                <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '0.5rem', fontWeight: 'bold' }}>Report Date Range</label>
+                <CustomSelect
+                  value={batchExportConfig.dateRange}
+                  onChange={val => setBatchExportConfig({...batchExportConfig, dateRange: val})}
+                  options={[
+                    { value: 'month', label: 'This Month' },
+                    { value: 'today', label: 'Today Only' },
+                    { value: 'last_month', label: 'Last Month' },
+                    { value: 'quarter', label: 'Past Quarter (3 Months)' },
+                    { value: 'custom', label: 'Custom Date Range...' }
+                  ]}
+                />
+              </div>
+
+              {batchExportConfig.dateRange === 'custom' && (
+                <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '0.5rem' }}>Start Date</label>
+                    <input type="date" className="form-control" value={batchExportConfig.customStart} onChange={e => setBatchExportConfig({...batchExportConfig, customStart: e.target.value})} style={{ width: '100%', padding: '0.8rem', borderRadius: '10px' }} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '0.5rem' }}>End Date</label>
+                    <input type="date" className="form-control" value={batchExportConfig.customEnd} onChange={e => setBatchExportConfig({...batchExportConfig, customEnd: e.target.value})} style={{ width: '100%', padding: '0.8rem', borderRadius: '10px' }} />
+                  </div>
                 </div>
-                <span style={{ 
-                  fontSize: '0.7rem', 
-                  fontWeight: isActive ? '800' : '600', 
-                  color: isActive ? tab.color : '#94a3b8',
-                  transition: 'all 0.3s'
-                }}>
-                  {tab.label}
-                </span>
+              )}
+
+              {/* Audience Selection */}
+              <div style={{ zIndex: 10 }}>
+                <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '0.5rem', fontWeight: 'bold' }}>Target Audience</label>
+                <CustomSelect
+                  value={batchExportConfig.audience}
+                  onChange={val => setBatchExportConfig({...batchExportConfig, audience: val})}
+                  options={[
+                    { value: 'all', label: `All My FOLK Boys (${myDevotees.length})` },
+                    { value: 'residents', label: `Residents Only (${totalResidents})` },
+                    { value: 'non-residents', label: `Non-Residents Only (${totalNonResidents})` },
+                    { value: 'beginners', label: `Beginners Only (${totalBeginners})` },
+                    ...residencies.map(r => ({ value: `residency_${r.name}`, label: `Residency: ${r.name}` })),
+                    { value: 'specific', label: 'Select Specific FOLK Boy...' }
+                  ]}
+                />
+              </div>
+
+              {batchExportConfig.audience === 'specific' && (
+                <div style={{ zIndex: 5 }}>
+                  <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '0.5rem' }}>Select FOLK Boy</label>
+                  <CustomSelect
+                    value={batchExportConfig.specificEmail}
+                    onChange={val => setBatchExportConfig({...batchExportConfig, specificEmail: val})}
+                    options={myDevotees.map(d => ({ value: d.email, label: `${d.name} (${d.email})` }))}
+                    placeholder="-- Choose FOLK Boy --"
+                  />
+                </div>
+              )}
+
+              {/* Generate Button */}
+              <button 
+                onClick={handleBatchExport} 
+                disabled={isExporting}
+                className="btn-primary" 
+                style={{ marginTop: '1rem', padding: '1rem', borderRadius: '12px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', fontSize: '1.1rem', background: isExporting ? '#64748b' : '#10b981' }}
+              >
+                {isExporting ? 'Generating Multi-Page PDF...' : <><Download size={20} /> Generate Master PDF Report</>}
               </button>
-            )
-          })}
+              {isExporting && <p style={{ textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '-10px' }}>This may take a few moments for large batches.</p>}
+            </div>
+          </div>
         </div>,
         document.body
       )}
+
 
       {/* Toast Notification */}
       {statusMsg && (
@@ -534,15 +629,21 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
             )}
             <div>
               <h1 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '800', color: '#f8fafc' }}>
-                {selectedDevotee ? `Devotee Portal View: ${selectedDevotee.name}` : 'FOLK Guide Portal'}
+                {selectedDevotee ? `FOLK Boy Portal View: ${selectedDevotee.name}` : 'FOLK Guide Portal'}
               </h1>
               <p style={{ margin: 0, fontSize: '0.78rem', color: '#64748b' }}>
-                {currentUser.name} • {myDevotees.length} Total Devotees ({totalResidents} Residents, {totalNonResidents} Non-Residents, {totalBeginners} Beginners)
+                {currentUser.name} • {myDevotees.length} Total FOLK Boys ({totalResidents} Residents, {totalNonResidents} Non-Residents, {totalBeginners} Beginners)
               </p>
             </div>
           </div>
 
           <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap', position: 'relative' }}>
+            {!selectedDevotee && (
+              <button onClick={() => setShowBatchExportModal(true)} className="nav-btn btn-secondary" style={{ padding: '0.55rem 1rem', borderRadius: '10px', borderColor: '#10b981', color: '#10b981', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem' }}>
+                <Download size={16} /> Batch Export PDFs
+              </button>
+            )}
+            
             {selectedDevotee && (
               <button onClick={() => downloadDevoteePDF(selectedDevotee)} style={{ padding: '0.55rem 1rem', borderRadius: '10px', border: 'none', background: 'rgba(16,185,129,0.15)', color: '#10b981', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem', fontFamily: 'inherit', fontSize: '0.85rem' }}>
                 <Download size={16} /> Download PDF
@@ -658,7 +759,7 @@ const GuideDashboard = ({ currentUser, onLogout }) => {
                 <img src={selectedDevotee.photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedDevotee.name}`} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #f59e0b' }} />
                 <div>
                   <div style={{ color: '#f8fafc', fontWeight: '800', fontSize: '1rem' }}>
-                    Devotee Portal: {selectedDevotee.name}
+                    FOLK Boy Portal: {selectedDevotee.name}
                   </div>
                   <div style={{ color: '#94a3b8', fontSize: '0.78rem' }}>
                     Category: <strong style={{ color: '#f59e0b' }}>{selectedDevotee.status}</strong> &middot; Residency: {selectedDevotee.residency || 'Non-Resident'}
@@ -815,7 +916,7 @@ PDF</button>
                     </div>
                   </div>
                 ))}
-                {leaderboard.length === 0 && <p style={{ color: '#64748b', textAlign: 'center', padding: '2rem' }}>No devotees match the selected filter.</p>}
+                {leaderboard.length === 0 && <p style={{ color: '#64748b', textAlign: 'center', padding: '2rem' }}>No FOLK Boys match the selected filter.</p>}
               </div>
             </div>
           </div>
@@ -913,9 +1014,9 @@ PDF</button>
                     <input type="text" className="form-control" value={newCampaign.festival} onChange={e => setNewCampaign({ ...newCampaign, festival: e.target.value })} placeholder="e.g. Kartik Festival / Gita Jayanti" />
                   </div>
                   <div>
-                    <label style={{ display: 'block', marginBottom: '0.3rem', color: 'var(--text-muted)', fontSize: '0.82rem', fontWeight: '600' }}>Target Devotees</label>
+                    <label style={{ display: 'block', marginBottom: '0.3rem', color: 'var(--text-muted)', fontSize: '0.82rem', fontWeight: '600' }}>Target FOLK Boys</label>
                     <select className="form-control" value={newCampaign.target} onChange={e => setNewCampaign({ ...newCampaign, target: e.target.value })}>
-                      <option value="all">All My Devotees ({myDevotees.length})</option>
+                      <option value="all">All My FOLK Boys ({myDevotees.length})</option>
                       <option value="FOLK Resident">FOLK Residents Only</option>
                       <option value="Non-FOLK Resident">Non-FOLK Residents Only</option>
                       <option value="Beginner">Beginners Only</option>
@@ -1084,7 +1185,7 @@ PDF</button>
                         {/* Acceptance Ratio Progress Bar */}
                         <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '0.8rem', marginBottom: '1rem' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', marginBottom: '0.4rem' }}>
-                            <span style={{ color: 'var(--text-main)', fontWeight: '700' }}>ðŸ“Š Devotee Acceptance Ratio:</span>
+                            <span style={{ color: 'var(--text-main)', fontWeight: '700' }}>ðŸ“Š FOLK Boy Acceptance Ratio:</span>
                             <span style={{ color: '#10b981', fontWeight: '800' }}>
                               {enrolledCount} / {totalTargetCount} Boys Enrolled ({acceptanceRatio}%)
                             </span>
@@ -1146,7 +1247,7 @@ PDF</button>
                                 </div>
                               </div>
                             ))}
-                            {campLeaderboard.length === 0 && <p style={{ color: '#64748b', fontSize: '0.8rem', margin: 0 }}>No devotees enrolled yet.</p>}
+                            {campLeaderboard.length === 0 && <p style={{ color: '#64748b', fontSize: '0.8rem', margin: 0 }}>No FOLK Boys enrolled yet.</p>}
                           </div>
                         </div>
 
@@ -1164,7 +1265,7 @@ PDF</button>
           <div className="animate-fade-in" style={{ maxWidth: '650px', margin: '0 auto' }}>
             <div className="panel">
               <h3 className="panel-title" style={{ marginBottom: '0.5rem', color: '#8b5cf6', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <CheckSquare size={20} /> Assign Task to Devotees' Bucket List
+                <CheckSquare size={20} /> Assign Task to FOLK Boys' Bucket List
               </h3>
               <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
                 Assigned tasks will appear directly in the selected boy(s) Bucket List marked with a â­ <strong>PRIORITY â€” Assigned by Guide</strong> badge.
@@ -1173,9 +1274,9 @@ PDF</button>
               <form onSubmit={handlePushBucketItem} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
                 {/* Target Type */}
                 <div>
-                  <label style={{ display: 'block', marginBottom: '0.4rem', color: 'var(--text-muted)', fontSize: '0.82rem', fontWeight: '600' }}>Target Devotees</label>
+                  <label style={{ display: 'block', marginBottom: '0.4rem', color: 'var(--text-muted)', fontSize: '0.82rem', fontWeight: '600' }}>Target FOLK Boys</label>
                   <select className="form-control" value={bucketPushTargetType} onChange={e => { setBucketPushTargetType(e.target.value); setBucketPushTargetValue(''); }}>
-                    <option value="all">All My Devotees ({myDevotees.length})</option>
+                    <option value="all">All My FOLK Boys ({myDevotees.length})</option>
                     <option value="individual">Specific Individual Boy</option>
                     <option value="residency">By Residency</option>
                     <option value="status">By Category Status (Residents / Beginners)</option>
@@ -1185,7 +1286,7 @@ PDF</button>
                 {/* Sub-target picker */}
                 {bucketPushTargetType === 'individual' && (
                   <div>
-                    <label style={{ display: 'block', marginBottom: '0.4rem', color: 'var(--text-muted)', fontSize: '0.82rem', fontWeight: '600' }}>Select Devotee</label>
+                    <label style={{ display: 'block', marginBottom: '0.4rem', color: 'var(--text-muted)', fontSize: '0.82rem', fontWeight: '600' }}>Select FOLK Boy</label>
                     <select className="form-control" value={bucketPushTargetValue} onChange={e => setBucketPushTargetValue(e.target.value)} required>
                       <option value="">Choose Boy...</option>
                       {myDevotees.map(d => <option key={d.email} value={d.email}>{d.name} ({d.residency || d.status})</option>)}
@@ -1248,7 +1349,7 @@ PDF</button>
           <div className="animate-fade-in" style={{ maxWidth: '650px', margin: '0 auto' }}>
             <div className="panel">
               <h3 className="panel-title" style={{ marginBottom: '0.5rem', color: '#3b82f6', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Send size={20} /> Targeted Devotee Broadcast
+                <Send size={20} /> Targeted FOLK Boy Broadcast
               </h3>
               <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
                 Send custom notifications to a specific boy, a specific residency, or an entire category group.
@@ -1258,7 +1359,7 @@ PDF</button>
                 <div>
                   <label style={{ display: 'block', marginBottom: '0.4rem', color: 'var(--text-muted)', fontSize: '0.82rem', fontWeight: '600' }}>Recipient Group</label>
                   <select className="form-control" value={msgTargetType} onChange={e => { setMsgTargetType(e.target.value); setMsgTargetValue(''); }}>
-                    <option value="all">All My Devotees ({myDevotees.length})</option>
+                    <option value="all">All My FOLK Boys ({myDevotees.length})</option>
                     <option value="individual">Specific Individual Boy</option>
                     <option value="residency">Selected Residency Only</option>
                     <option value="status">By Category (Residents / Non-Residents / Beginners)</option>
@@ -1267,7 +1368,7 @@ PDF</button>
 
                 {msgTargetType === 'individual' && (
                   <div>
-                    <label style={{ display: 'block', marginBottom: '0.4rem', color: 'var(--text-muted)', fontSize: '0.82rem', fontWeight: '600' }}>Select Devotee</label>
+                    <label style={{ display: 'block', marginBottom: '0.4rem', color: 'var(--text-muted)', fontSize: '0.82rem', fontWeight: '600' }}>Select FOLK Boy</label>
                     <select className="form-control" value={msgTargetValue} onChange={e => setMsgTargetValue(e.target.value)} required>
                       <option value="">Choose Boy...</option>
                       {myDevotees.map(d => <option key={d.email} value={d.email}>{d.name} ({d.residency || d.status})</option>)}
@@ -1326,7 +1427,7 @@ PDF</button>
                 <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.85rem 1rem', background: 'var(--bg-input)', borderRadius: '10px', marginBottom: '0.5rem' }}>
                   <div>
                     <div style={{ fontWeight: '700', color: 'var(--text-main)' }}>{r.name}</div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{myDevotees.filter(d => d.residency === r.name).length} assigned devotees</div>
+                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{myDevotees.filter(d => d.residency === r.name).length} assigned FOLK Boys</div>
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
                     <button onClick={() => setEditingResidency(r)} className="btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem', borderRadius: '6px' }}>âš™ï¸ Edit Settings</button>
@@ -1402,17 +1503,17 @@ PDF</button>
       {/* â•â•â• REDEMPTIONS TAB â•â•â• */}
       {!selectedDevotee && activeTab === 'redemptions' && (
         <div className="animate-fade-in panel">
-          <h3 className="panel-title" style={{ marginBottom: '1.2rem', color: '#f59e0b' }}>ðŸŽ Devotee Redemption Requests</h3>
+          <h3 className="panel-title" style={{ marginBottom: '1.2rem', color: '#f59e0b' }}>ðŸŽ FOLK Boy Redemption Requests</h3>
           
           {redemptions.length === 0 ? (
-            <p style={{ color: 'var(--text-muted)', textAlign: 'center', margin: '2rem 0' }}>No redemption requests from your devotees yet.</p>
+            <p style={{ color: 'var(--text-muted)', textAlign: 'center', margin: '2rem 0' }}>No redemption requests from your FOLK Boys yet.</p>
           ) : (
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid var(--border-subtle)', textAlign: 'left', color: 'var(--text-muted)' }}>
                     <th style={{ padding: '1rem' }}>Date</th>
-                    <th style={{ padding: '1rem' }}>Devotee</th>
+                    <th style={{ padding: '1rem' }}>FOLK Boy</th>
                     <th style={{ padding: '1rem' }}>Request</th>
                     <th style={{ padding: '1rem' }}>Status</th>
                     <th style={{ padding: '1rem' }}>Action</th>

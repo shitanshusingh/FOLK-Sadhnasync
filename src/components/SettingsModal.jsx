@@ -342,7 +342,7 @@ const SettingsModal = ({ user, onClose, onLogout }) => {
                   <Info size={40} color="var(--primary-amber)" />
                 </div>
                 <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-main)', fontSize: '1.5rem' }}>FOLK SadhnaSync v1.0</h3>
-                <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>Empowering devotees to track their spiritual progress.</p>
+                <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>Empowering FOLK Boys to track their spiritual progress.</p>
                 
                 <div style={{ display: 'inline-block', textAlign: 'left', background: 'var(--bg-card)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border-subtle)', maxWidth: '450px' }}>
                   <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-main)' }}>Contact Support</h4>
